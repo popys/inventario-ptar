@@ -741,12 +741,12 @@ def reporte_movimientos():
 
 if __name__ == '__main__':
     print("=" * 60)
-    print("🚀 SISTEMA DE INVENTARIO PTAR - VERSIÓN WEB")
+    print("SISTEMA DE INVENTARIO PTAR - VERSIÓN WEB")
     print("=" * 60)
-    print(f"\n✅ Servidor iniciado exitosamente")
-    print(f"📍 URL: http://localhost:5000")
-    print(f"📁 Base de datos: {DB_PATH}")
-    print(f"\n💡 Presiona Ctrl+C para detener el servidor\n")
+    print(f"\nServidor iniciado exitosamente")
+    print(f" URL: http://localhost:5000")
+    print(f"Base de datos: {DB_PATH}")
+    print(f"\n Presiona Ctrl+C para detener el servidor\n")
     print("=" * 60)
 
     app.run(debug=True, host='0.0.0.0', port=5000)
