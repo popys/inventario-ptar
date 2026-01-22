@@ -48,7 +48,7 @@ app.get('/', (req, res) => {
         <h1>🏭 Sistema de Inventario PTAR</h1>
         <div class="info">
           <p class="status">✅ Servidor funcionando correctamente</p>
-          <p><strong>Versión:</strong> 1.0.0</p>
+          <p><strong>Versión:</strong>1.0.1 - Probando SSH ✅</p>
           <p><strong>Estado:</strong> Activo</p>
         </div>
         <h2>Bienvenido</h2>
