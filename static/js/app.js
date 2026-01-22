@@ -607,7 +607,7 @@ async function actualizarEstadisticas() {
 // ================================
 // REPORTES
 // ================================
-function descargarReporte(tipo) {
+async function descargarReporte(tipo) {
     const urls = {
         'inventario': '/api/reportes/inventario',
         'stock-bajo': '/api/reportes/stock-bajo',
@@ -615,9 +615,48 @@ function descargarReporte(tipo) {
     };
 
     const url = urls[tipo];
-    if (url) {
-        window.location.href = url;
+    if (!url) return;
+
+    try {
         mostrarToast('Generando reporte...', 'info');
+
+        // Realizar la petición al servidor
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            throw new Error('Error al generar el reporte');
+        }
+
+        // Obtener el blob (archivo binario)
+        const blob = await response.blob();
+
+        // Obtener el nombre del archivo desde los headers o generar uno
+        const contentDisposition = response.headers.get('content-disposition');
+        let filename = 'reporte.xlsx';
+
+        if (contentDisposition) {
+            const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+            if (filenameMatch && filenameMatch[1]) {
+                filename = filenameMatch[1].replace(/['"]/g, '');
+            }
+        }
+
+        // Crear un enlace temporal y forzar la descarga
+        const blobUrl = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+
+        // Limpiar
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(blobUrl);
+
+        mostrarToast('Reporte descargado exitosamente', 'success');
+    } catch (error) {
+        mostrarToast('Error al descargar el reporte', 'error');
+        console.error('Error:', error);
     }
 }
 
