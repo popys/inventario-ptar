@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Inventario PTAR</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <i class="fas fa-warehouse"></i>
+                <h1>Sistema de Inventario PTAR</h1>
+            </div>
+            <div class="header-stats" id="headerStats">
+                <div class="stat-item">
+                    <i class="fas fa-box"></i>
+                    <span id="totalMateriales">0</span>
+                    <small>Total Materiales</small>
+                </div>
+                <div class="stat-item warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span id="stockBajo">0</span>
+                    <small>Stock Bajo</small>
+                </div>
+                <div class="stat-item danger">
+                    <i class="fas fa-times-circle"></i>
+                    <span id="sinStock">0</span>
+                    <small>Sin Stock</small>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="tabs">
+        <button class="tab-btn active" data-tab="inventario">
+            <i class="fas fa-boxes"></i> Inventario
+        </button>
+        <button class="tab-btn" data-tab="entrada">
+            <i class="fas fa-arrow-circle-down"></i> Entrada Material
+        </button>
+        <button class="tab-btn" data-tab="salida">
+            <i class="fas fa-arrow-circle-up"></i> Salida Material
+        </button>
+        <button class="tab-btn" data-tab="prestamos">
+            <i class="fas fa-handshake"></i> Préstamos
+        </button>
+        <button class="tab-btn" data-tab="en-uso">
+            <i class="fas fa-tools"></i> Material en Uso
+        </button>
+        <button class="tab-btn" data-tab="reportes">
+            <i class="fas fa-chart-bar"></i> Reportes
+        </button>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+
+        <!-- INVENTARIO TAB -->
+        <div class="tab-content active" id="inventario">
+            <div class="content-header">
+                <h2><i class="fas fa-boxes"></i> Gestión de Inventario</h2>
+                <button class="btn btn-primary" onclick="mostrarModalAgregar()">
+                    <i class="fas fa-plus"></i> Agregar Material
+                </button>
+            </div>
+
+            <!-- Filtros -->
+            <div class="filters-panel">
+                <div class="filter-group">
+                    <label><i class="fas fa-search"></i> Buscar:</label>
+                    <input type="text" id="searchInput" placeholder="Código, nombre o descripción..." class="input-search">
+                </div>
+                <div class="filter-group">
+                    <label><i class="fas fa-tag"></i> Categoría:</label>
+                    <select id="filterCategoria" class="input-select">
+                        <option value="">Todas</option>
+                        <option value="Eléctrico">Eléctrico</option>
+                        <option value="Mecánico">Mecánico</option>
+                        <option value="Químico">Químico</option>
+                        <option value="Herramientas">Herramientas</option>
+                        <option value="Instrumentación">Instrumentación</option>
+                        <option value="Consumibles">Consumibles</option>
+                        <option value="Repuestos">Repuestos</option>
+                        <option value="Otros">Otros</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label><i class="fas fa-map-marker-alt"></i> Ubicación:</label>
+                    <select id="filterUbicacion" class="input-select">
+                        <option value="">Todas</option>
+                        <option value="PTAR I">PTAR I</option>
+                        <option value="PTAR II">PTAR II</option>
+                        <option value="Almacén General">Almacén General</option>
+                        <option value="Estaciones de Bombeo">Estaciones de Bombeo</option>
+                        <option value="Taller">Taller</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label><i class="fas fa-filter"></i> Estado:</label>
+                    <select id="filterEstado" class="input-select">
+                        <option value="">Todos</option>
+                        <option value="stock_normal">Stock Normal</option>
+                        <option value="stock_bajo">Stock Bajo</option>
+                        <option value="sin_stock">Sin Stock</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Tabla de Inventario -->
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Código</th>
+                            <th>Nombre</th>
+                            <th>Descripción</th>
+                            <th>Categoría</th>
+                            <th>Ubicación</th>
+                            <th>Cantidad</th>
+                            <th>Unidad</th>
+                            <th>Stock Mín.</th>
+                            <th>Costo Unit.</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="inventarioTableBody">
+                        <tr>
+                            <td colspan="10" class="loading">
+                                <i class="fas fa-spinner fa-spin"></i> Cargando...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ENTRADA MATERIAL TAB -->
+        <div class="tab-content" id="entrada">
+            <div class="content-header">
+                <h2><i class="fas fa-arrow-circle-down"></i> Registro de Entrada de Material</h2>
+            </div>
+
+            <div class="form-container">
+                <form id="formEntrada" class="material-form">
+                    <div class="form-grid">
+                        <div class="form-group full-width">
+                            <label><i class="fas fa-box"></i> Material *</label>
+                            <select id="entradaMaterialId" class="input-select" required>
+                                <option value="">Seleccione un material...</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label><i class="fas fa-hashtag"></i> Cantidad *</label>
+                            <input type="number" id="entradaCantidad" class="input-field" step="0.01" min="0.01" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label><i class="fas fa-truck"></i> Origen *</label>
+                            <input type="text" id="entradaOrigen" class="input-field" placeholder="Proveedor, transferencia, etc." required>
+                        </div>
+
+                        <div class="form-group">
+                            <label><i class="fas fa-user"></i> Responsable *</label>
+                            <input type="text" id="entradaResponsable" class="input-field" required>
+                        </div>
+
+                        <div class="form-group full-width">
+                            <label><i class="fas fa-comment"></i> Observaciones</label>
+                            <textarea id="entradaObservaciones" class="input-textarea" rows="3"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-check"></i> Registrar Entrada
+                        </button>
+                        <button type="reset" class="btn btn-secondary">
+                            <i class="fas fa-undo"></i> Limpiar
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Historial Reciente -->
+            <div class="recent-section">
+                <h3><i class="fas fa-history"></i> Últimas Entradas</h3>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Material</th>
+                                <th>Cantidad</th>
+                                <th>Origen</th>
+                                <th>Responsable</th>
+                            </tr>
+                        </thead>
+                        <tbody id="entradasTableBody">
+                            <tr><td colspan="5" class="loading"><i class="fas fa-spinner fa-spin"></i> Cargando...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- SALIDA MATERIAL TAB -->
+        <div class="tab-content" id="salida">
+            <div class="content-header">
+                <h2><i class="fas fa-arrow-circle-up"></i> Registro de Salida de Material</h2>
+            </div>
+
+            <div class="form-container">
+                <form id="formSalida" class="material-form">
+                    <div class="form-grid">
+                        <div class="form-group full-width">
+                            <label><i class="fas fa-box"></i> Material *</label>
+                            <select id="salidaMaterialId" class="input-select" required>
+                                <option value="">Seleccione un material...</option>
+                            </select>
+                            <small class="disponible-info" id="salidaDisponible"></small>
+                        </div>
+
+                        <div class="form-group">
+                            <label><i class="fas fa-hashtag"></i> Cantidad *</label>
+                            <input type="number" id="salidaCantidad" class="input-field" step="0.01" min="0.01" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label><i class="fas fa-map-marker-alt"></i> Destino *</label>
+                            <select id="salidaDestino" class="input-select" required>
+                                <option value="">Seleccione destino...</option>
+                                <option value="PTAR I">PTAR I</option>
+                                <option value="PTAR II">PTAR II</option>
+                                <option value="Estaciones de Bombeo">Estaciones de Bombeo</option>
+                                <option value="Taller">Taller</option>
+                                <option value="Mantenimiento">Mantenimiento</option>
+                                <option value="Otro">Otro</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label><i class="fas fa-user"></i> Responsable *</label>
+                            <input type="text" id="salidaResponsable" class="input-field" required>
+                        </div>
+
+                        <div class="form-group full-width">
+                            <label><i class="fas fa-comment"></i> Observaciones</label>
+                            <textarea id="salidaObservaciones" class="input-textarea" rows="3"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-warning">
+                            <i class="fas fa-check"></i> Registrar Salida
+                        </button>
+                        <button type="reset" class="btn btn-secondary">
+                            <i class="fas fa-undo"></i> Limpiar
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Historial Reciente -->
+            <div class="recent-section">
+                <h3><i class="fas fa-history"></i> Últimas Salidas</h3>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Material</th>
+                                <th>Cantidad</th>
+                                <th>Destino</th>
+                                <th>Responsable</th>
+                            </tr>
+                        </thead>
+                        <tbody id="salidasTableBody">
+                            <tr><td colspan="5" class="loading"><i class="fas fa-spinner fa-spin"></i> Cargando...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- PRÉSTAMOS TAB -->
+        <div class="tab-content" id="prestamos">
+            <div class="content-header">
+                <h2><i class="fas fa-handshake"></i> Control de Préstamos</h2>
+            </div>
+
+            <div class="form-container">
+                <form id="formPrestamo" class="material-form">
+                    <div class="form-grid">
+                        <div class="form-group full-width">
+                            <label><i class="fas fa-box"></i> Material *</label>
+                            <select id="prestamoMaterialId" class="input-select" required>
+                                <option value="">Seleccione un material...</option>
+                            </select>
+                            <small class="disponible-info" id="prestamoDisponible"></small>
+                        </div>
+
+                        <div class="form-group">
+                            <label><i class="fas fa-hashtag"></i> Cantidad *</label>
+                            <input type="number" id="prestamoCantidad" class="input-field" step="0.01" min="0.01" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label><i class="fas fa-user"></i> Prestado a *</label>
+                            <input type="text" id="prestamoPrestadoA" class="input-field" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label><i class="fas fa-building"></i> Área/Proyecto *</label>
+                            <input type="text" id="prestamoArea" class="input-field" required>
+                        </div>
+
+                        <div class="form-group full-width">
+                            <label><i class="fas fa-comment"></i> Observaciones</label>
+                            <textarea id="prestamoObservaciones" class="input-textarea" rows="3"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-info">
+                            <i class="fas fa-check"></i> Registrar Préstamo
+                        </button>
+                        <button type="reset" class="btn btn-secondary">
+                            <i class="fas fa-undo"></i> Limpiar
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Préstamos Activos -->
+            <div class="recent-section">
+                <h3><i class="fas fa-list"></i> Préstamos Activos</h3>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Fecha Préstamo</th>
+                                <th>Material</th>
+                                <th>Cantidad</th>
+                                <th>Prestado a</th>
+                                <th>Área</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="prestamosTableBody">
+                            <tr><td colspan="6" class="loading"><i class="fas fa-spinner fa-spin"></i> Cargando...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- MATERIAL EN USO TAB -->
+        <div class="tab-content" id="en-uso">
+            <div class="content-header">
+                <h2><i class="fas fa-tools"></i> Material en Uso</h2>
+            </div>
+
+            <div class="form-container">
+                <form id="formEnUso" class="material-form">
+                    <div class="form-grid">
+                        <div class="form-group full-width">
+                            <label><i class="fas fa-box"></i> Material *</label>
+                            <select id="enUsoMaterialId" class="input-select" required>
+                                <option value="">Seleccione un material...</option>
+                            </select>
+                            <small class="disponible-info" id="enUsoDisponible"></small>
+                        </div>
+
+                        <div class="form-group">
+                            <label><i class="fas fa-hashtag"></i> Cantidad *</label>
+                            <input type="number" id="enUsoCantidad" class="input-field" step="0.01" min="0.01" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label><i class="fas fa-cog"></i> Equipo/Instalación *</label>
+                            <input type="text" id="enUsoEquipo" class="input-field" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label><i class="fas fa-user"></i> Responsable *</label>
+                            <input type="text" id="enUsoResponsable" class="input-field" required>
+                        </div>
+
+                        <div class="form-group full-width">
+                            <label><i class="fas fa-comment"></i> Observaciones</label>
+                            <textarea id="enUsoObservaciones" class="input-textarea" rows="3"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-check"></i> Registrar Material en Uso
+                        </button>
+                        <button type="reset" class="btn btn-secondary">
+                            <i class="fas fa-undo"></i> Limpiar
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Listado de Material en Uso -->
+            <div class="recent-section">
+                <h3><i class="fas fa-list"></i> Material Actualmente en Uso</h3>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Fecha Instalación</th>
+                                <th>Material</th>
+                                <th>Cantidad</th>
+                                <th>Equipo/Instalación</th>
+                                <th>Responsable</th>
+                            </tr>
+                        </thead>
+                        <tbody id="enUsoTableBody">
+                            <tr><td colspan="5" class="loading"><i class="fas fa-spinner fa-spin"></i> Cargando...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- REPORTES TAB -->
+        <div class="tab-content" id="reportes">
+            <div class="content-header">
+                <h2><i class="fas fa-chart-bar"></i> Reportes y Estadísticas</h2>
+            </div>
+
+            <!-- Estadísticas -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon primary">
+                        <i class="fas fa-boxes"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="statTotalMateriales">0</h3>
+                        <p>Total Materiales</p>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="statStockBajo">0</h3>
+                        <p>Stock Bajo</p>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon danger">
+                        <i class="fas fa-times-circle"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="statSinStock">0</h3>
+                        <p>Sin Stock</p>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon info">
+                        <i class="fas fa-handshake"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="statPrestamosActivos">0</h3>
+                        <p>Préstamos Activos</p>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon success">
+                        <i class="fas fa-tools"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="statMaterialEnUso">0</h3>
+                        <p>Material en Uso</p>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon primary">
+                        <i class="fas fa-exchange-alt"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="statMovimientosMes">0</h3>
+                        <p>Movimientos del Mes</p>
+                    </div>
+                </div>
+
+                <div class="stat-card full-width">
+                    <div class="stat-icon success">
+                        <i class="fas fa-dollar-sign"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="statValorTotal">$0.00</h3>
+                        <p>Valor Total del Inventario</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Botones de Reportes -->
+            <div class="reports-section">
+                <h3><i class="fas fa-file-excel"></i> Generar Reportes en Excel</h3>
+                <div class="reports-grid">
+                    <button class="report-btn" onclick="descargarReporte('inventario')">
+                        <i class="fas fa-file-download"></i>
+                        <span>Inventario Completo</span>
+                    </button>
+                    <button class="report-btn" onclick="descargarReporte('stock-bajo')">
+                        <i class="fas fa-file-download"></i>
+                        <span>Stock Bajo</span>
+                    </button>
+                    <button class="report-btn" onclick="descargarReporte('movimientos')">
+                        <i class="fas fa-file-download"></i>
+                        <span>Movimientos del Mes</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Modal Agregar/Editar Material -->
+    <div id="modalMaterial" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle"><i class="fas fa-plus"></i> Agregar Material</h2>
+                <button class="modal-close" onclick="cerrarModal()">&times;</button>
+            </div>
+            <form id="formMaterial" class="material-form">
+                <input type="hidden" id="materialId">
+
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label><i class="fas fa-barcode"></i> Código *</label>
+                        <input type="text" id="materialCodigo" class="input-field" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label><i class="fas fa-tag"></i> Nombre *</label>
+                        <input type="text" id="materialNombre" class="input-field" required>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label><i class="fas fa-align-left"></i> Descripción</label>
+                        <textarea id="materialDescripcion" class="input-textarea" rows="2"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label><i class="fas fa-layer-group"></i> Categoría</label>
+                        <select id="materialCategoria" class="input-select">
+                            <option value="Eléctrico">Eléctrico</option>
+                            <option value="Mecánico">Mecánico</option>
+                            <option value="Químico">Químico</option>
+                            <option value="Herramientas">Herramientas</option>
+                            <option value="Instrumentación">Instrumentación</option>
+                            <option value="Consumibles">Consumibles</option>
+                            <option value="Repuestos">Repuestos</option>
+                            <option value="Otros">Otros</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label><i class="fas fa-ruler"></i> Unidad de Medida</label>
+                        <input type="text" id="materialUnidad" class="input-field" placeholder="Ej: pza, kg, lt">
+                    </div>
+
+                    <div class="form-group">
+                        <label><i class="fas fa-hashtag"></i> Cantidad Inicial</label>
+                        <input type="number" id="materialCantidad" class="input-field" step="0.01" min="0" value="0">
+                    </div>
+
+                    <div class="form-group">
+                        <label><i class="fas fa-exclamation-triangle"></i> Stock Mínimo</label>
+                        <input type="number" id="materialStockMinimo" class="input-field" step="0.01" min="0" value="0">
+                    </div>
+
+                    <div class="form-group">
+                        <label><i class="fas fa-map-marker-alt"></i> Ubicación</label>
+                        <select id="materialUbicacion" class="input-select">
+                            <option value="PTAR I">PTAR I</option>
+                            <option value="PTAR II">PTAR II</option>
+                            <option value="Almacén General">Almacén General</option>
+                            <option value="Estaciones de Bombeo">Estaciones de Bombeo</option>
+                            <option value="Taller">Taller</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label><i class="fas fa-dollar-sign"></i> Costo Unitario</label>
+                        <input type="number" id="materialCosto" class="input-field" step="0.01" min="0" value="0">
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label><i class="fas fa-sticky-note"></i> Notas</label>
+                        <textarea id="materialNotas" class="input-textarea" rows="2"></textarea>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Guardar
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="cerrarModal()">
+                        <i class="fas fa-times"></i> Cancelar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast para notificaciones -->
+    <div id="toast" class="toast"></div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

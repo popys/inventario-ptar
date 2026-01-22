@@ -1,0 +1,264 @@
+# EJEMPLOS DE USO Y MEJORES PRÁCTICAS
+# Sistema de Inventario PTAR
+
+## 📌 SISTEMA DE CÓDIGOS SUGERIDO
+
+Para mantener orden en tu inventario, te sugiero usar un sistema de códigos como este:
+
+### Estructura de Código: [CATEGORÍA]-[SUBCATEGORÍA]-[NÚMERO]
+
+Ejemplos:
+- ELE-CAB-001: Cable eléctrico calibre 12 AWG
+- ELE-BRK-001: Breaker 3x100A
+- ELE-CON-001: Contactor 3P 25A
+- MEC-ROD-001: Rodamiento 6205
+- MEC-SEL-001: Sello mecánico bomba centrífuga
+- MEC-VAL-001: Válvula de compuerta 4"
+- QUI-COA-001: Coagulante Sulfato de Aluminio
+- QUI-POL-001: Polímero catiónico
+- HER-LLA-001: Llave inglesa 12"
+- HER-MUL-001: Multímetro digital
+- INS-SEN-001: Sensor de nivel ultrasónico
+- INS-TRA-001: Transmisor de presión 0-10 bar
+- CON-ACE-001: Aceite hidráulico ISO 68
+- CON-GRA-001: Grasa multiuso de litio
+- REP-IMP-001: Impulsor bomba centrífuga 10HP
+
+## 🎯 FLUJO DE TRABAJO RECOMENDADO
+
+### 1. CONFIGURACIÓN INICIAL (Primera vez)
+
+1. Define tus ubicaciones principales:
+   - PTAR I
+   - PTAR II
+   - Almacén General
+   - Estación Bombeo 1
+   - Estación Bombeo 2
+   - Taller de Mantenimiento
+
+2. Establece niveles de stock mínimo inteligentes:
+   - Consumibles frecuentes: 30-60 días de uso
+   - Repuestos críticos: 2 unidades mínimo
+   - Herramientas: 1 unidad (marcar si está en préstamo)
+   - Químicos: Según ciclo de entrega del proveedor
+
+3. Crea un catálogo inicial:
+   - Empieza con los 20-30 materiales más críticos
+   - Agrega materiales conforme los vas necesitando
+   - No intentes registrar todo de golpe
+
+### 2. OPERACIÓN DIARIA
+
+#### Mañana:
+1. Revisar alertas de stock bajo
+2. Verificar préstamos pendientes de devolución
+3. Revisar material en uso en equipos críticos
+
+#### Durante el día:
+1. Registrar TODAS las salidas inmediatamente
+2. Capturar entradas el mismo día que llegan
+3. Anotar observaciones importantes (número de factura, lote, etc.)
+
+#### Fin del día:
+1. Verificar que todas las salidas están registradas
+2. Revisar movimientos del día
+3. Hacer respaldo si hubo muchos cambios
+
+### 3. OPERACIÓN MENSUAL
+
+1. Primera semana:
+   - Generar reporte de inventario completo
+   - Identificar materiales con stock bajo
+   - Preparar requisiciones de compra
+
+2. Segunda semana:
+   - Revisar préstamos activos de más de 30 días
+   - Verificar material en uso vs. registros
+
+3. Tercera semana:
+   - Generar reporte de movimientos del mes
+   - Analizar consumos anormales
+   - Verificar costos
+
+4. Cuarta semana:
+   - Hacer inventario físico de materiales críticos
+   - Ajustar niveles de stock mínimo si es necesario
+   - Hacer respaldo mensual de la base de datos
+
+## 💡 CASOS DE USO TÍPICOS
+
+### CASO 1: Mantenimiento Preventivo
+**Situación:** Se va a realizar mantenimiento a bomba sumergible
+
+Paso 1 - Revisar material necesario:
+- Buscar en inventario: "rodamiento", "sello", "aceite"
+- Verificar cantidades disponibles
+
+Paso 2 - Sacar material:
+- Ir a "Salida Material"
+- Registrar cada item con destino: "Mantenimiento Bomba S-101"
+- Responsable: Nombre del técnico
+
+Paso 3 - Si sobra material:
+- Hacer "Entrada Material"
+- Origen: "Devolución Mantenimiento Bomba S-101"
+
+### CASO 2: Emergencia - Falla de Equipo
+**Situación:** Falla bomba dosificadora de cloro
+
+Paso 1 - Verificar stock de repuesto:
+- Buscar: "bomba dosificadora" o código específico
+- Si hay stock: registrar salida inmediata
+- Si no hay: marcar para compra urgente
+
+Paso 2 - Instalar repuesto:
+- Salida de material con destino: "Bomba Cloro PTAR II"
+- Observaciones: "Emergencia - Falla bomba anterior"
+
+Paso 3 - Registrar bomba dañada:
+- Si es reparable: no hacer nada aún
+- Si es desecho: dar de baja en material en uso
+
+### CASO 3: Préstamo Entre PTARs
+**Situación:** PTAR II necesita bomba temporal mientras reparan la suya
+
+Paso 1 - En pestaña "Préstamos":
+- Material: Bomba centrífuga 5HP
+- Cantidad: 1
+- Prestado a: PTAR II
+- Área: Bombeo primario
+- Observaciones: "Préstamo temporal durante reparación"
+
+Paso 2 - Cuando devuelvan:
+- Seleccionar el préstamo
+- Clic en "Registrar Devolución"
+- El material regresa automáticamente al inventario
+
+### CASO 4: Material Instalado Permanente
+**Situación:** Se instala equipo nuevo con sus componentes
+
+En "Material en Uso":
+- Material: Variador de frecuencia 20HP
+- Cantidad: 1
+- Equipo: "Bomba P-205 PTAR II"
+- Fecha se registra automáticamente
+- Observaciones: "Instalación nueva, número de serie: XYZ123"
+
+Este material ya no aparece como disponible, pero está registrado su uso.
+
+## ⚠️ ERRORES COMUNES A EVITAR
+
+### ❌ NO HACER:
+1. Sacar material sin registrar (aunque sea urgente)
+2. Esperar días para registrar movimientos
+3. Dejar campos de responsable vacíos
+4. Olvidar registrar devoluciones de préstamos
+5. No hacer respaldos regularmente
+6. Usar códigos duplicados
+7. Dejar observaciones vacías en movimientos importantes
+
+### ✅ SÍ HACER:
+1. Registrar TODO movimiento el mismo día
+2. Ser específico en las observaciones
+3. Verificar stock antes de promesas de entrega
+4. Hacer respaldos semanales mínimo
+5. Capacitar a todo el personal que usa el sistema
+6. Revisar alertas de stock bajo semanalmente
+7. Mantener código único y consistente
+
+## 📊 ANÁLISIS DE DATOS
+
+### Indicadores Clave a Monitorear:
+
+1. **Rotación de Inventario:**
+   - Generar "Movimientos del Mes"
+   - Identificar materiales de alta rotación
+   - Ajustar stocks mínimos
+
+2. **Materiales Sin Movimiento:**
+   - Revisar materiales que llevan >6 meses sin salida
+   - Considerar reasignación o dar de baja
+
+3. **Préstamos Vencidos:**
+   - Préstamos >30 días sin devolver
+   - Hacer seguimiento con responsables
+
+4. **Valor del Inventario:**
+   - Verificar valor total mensualmente
+   - Identificar materiales de alto costo
+   - Priorizar control de estos items
+
+## 🔒 SEGURIDAD Y RESPALDOS
+
+### Respaldo Automático Recomendado:
+
+Crea un script .bat para respaldo automático:
+
+```batch
+@echo off
+REM Respaldo automático base de datos
+set fecha=%date:~-4%%date:~3,2%%date:~0,2%
+copy "inventario_ptar.db" "respaldos\inventario_ptar_%fecha%.db"
+echo Respaldo creado: inventario_ptar_%fecha%.db
+```
+
+Programa este script para ejecutarse:
+- Diariamente al cerrar (si hay muchos movimientos)
+- Semanalmente (operación normal)
+- Antes de cada actualización del sistema
+
+### Dónde Guardar Respaldos:
+1. Disco local en carpeta "respaldos"
+2. USB externa
+3. Nube (Google Drive, OneDrive)
+4. Servidor de red (si está disponible)
+
+## 🎓 CAPACITACIÓN DEL PERSONAL
+
+### Nivel Básico (Todos los usuarios):
+- Consultar inventario
+- Buscar materiales
+- Ver cantidades disponibles
+
+### Nivel Intermedio (Técnicos):
+- Registrar salidas
+- Consultar préstamos
+- Ver material en uso
+
+### Nivel Avanzado (Almacenistas):
+- Agregar nuevos materiales
+- Registrar entradas
+- Gestionar préstamos
+- Editar/eliminar registros
+- Generar reportes
+
+### Nivel Administrador (Jefe de Mantenimiento):
+- Todas las funciones
+- Análisis de datos
+- Configuración del sistema
+- Gestión de respaldos
+
+## 📞 SOPORTE
+
+Para dudas o problemas:
+1. Revisa primero el README.md
+2. Revisa este archivo de ejemplos
+3. Revisa el Manual PDF
+4. Contacta al administrador del sistema
+
+## 🚀 MEJORAS FUTURAS
+
+Funcionalidades que podrías agregar:
+- [ ] Fotografías de materiales
+- [ ] Código de barras / QR
+- [ ] Alertas por email
+- [ ] Sincronización en red
+- [ ] Módulo de órdenes de compra
+- [ ] Historial de proveedores
+- [ ] Tiempo promedio entre mantenimientos
+- [ ] Consumo por equipo
+- [ ] Proyección de necesidades
+
+---
+
+¡Éxito en el control de tu inventario! 🎉
