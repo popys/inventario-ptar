@@ -4,12 +4,20 @@ from datetime import datetime
 import pandas as pd
 from io import BytesIO
 import os
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'ptar-inventario-2025'
+app.config['UPLOAD_FOLDER'] = 'imagenes_materiales'
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB max
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 
 # Ruta a la base de datos existente
 DB_PATH = 'inventario_ptar.db'
+
+def allowed_file(filename):
+    """Verifica si el archivo tiene una extensión permitida"""
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def get_db_connection():
     """Obtiene conexión a la base de datos"""
@@ -184,8 +192,8 @@ def create_material():
         cursor.execute('''
             INSERT INTO materiales (codigo, nombre, descripcion, categoria, unidad,
                                    cantidad_actual, stock_minimo, ubicacion, costo_unitario,
-                                   notas, fecha_registro)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                   notas, fecha_registro, imagen_ruta)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             data['codigo'],
             data['nombre'],
@@ -197,7 +205,8 @@ def create_material():
             data.get('ubicacion', ''),
             data.get('costo_unitario', 0),
             data.get('notas', ''),
-            datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            data.get('imagen_ruta', '')
         ))
 
         conn.commit()
@@ -221,7 +230,7 @@ def update_material(id):
         conn.execute('''
             UPDATE materiales
             SET codigo = ?, nombre = ?, descripcion = ?, categoria = ?, unidad = ?,
-                stock_minimo = ?, ubicacion = ?, costo_unitario = ?, notas = ?
+                stock_minimo = ?, ubicacion = ?, costo_unitario = ?, notas = ?, imagen_ruta = ?
             WHERE id = ?
         ''', (
             data['codigo'],
@@ -233,6 +242,7 @@ def update_material(id):
             data.get('ubicacion', ''),
             data.get('costo_unitario', 0),
             data.get('notas', ''),
+            data.get('imagen_ruta', ''),
             id
         ))
 
@@ -643,6 +653,55 @@ def get_estadisticas():
         'movimientos_mes': movimientos_mes,
         'valor_total': round(valor_total, 2)
     })
+
+# ===============================
+# API - IMÁGENES
+# ===============================
+
+@app.route('/api/upload-imagen', methods=['POST'])
+def upload_imagen():
+    """Sube una imagen de material"""
+    try:
+        if 'imagen' not in request.files:
+            return jsonify({'error': 'No se proporcionó ninguna imagen'}), 400
+
+        file = request.files['imagen']
+
+        if file.filename == '':
+            return jsonify({'error': 'No se seleccionó ningún archivo'}), 400
+
+        if not allowed_file(file.filename):
+            return jsonify({'error': 'Tipo de archivo no permitido. Use: PNG, JPG, JPEG, GIF, WEBP'}), 400
+
+        # Generar nombre único
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = secure_filename(file.filename)
+        name, ext = os.path.splitext(filename)
+        unique_filename = f"{name}_{timestamp}{ext}"
+
+        # Guardar archivo
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
+        file.save(filepath)
+
+        return jsonify({
+            'success': True,
+            'imagen_ruta': unique_filename,
+            'message': 'Imagen subida exitosamente'
+        })
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/imagenes_materiales/<filename>')
+def serve_imagen(filename):
+    """Sirve una imagen de material"""
+    try:
+        return send_file(
+            os.path.join(app.config['UPLOAD_FOLDER'], filename),
+            mimetype='image/jpeg'
+        )
+    except Exception as e:
+        return jsonify({'error': 'Imagen no encontrada'}), 404
 
 # ===============================
 # API - REPORTES

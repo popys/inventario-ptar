@@ -33,6 +33,9 @@ function inicializarEventos() {
     document.getElementById('formPrestamo')?.addEventListener('submit', registrarPrestamo);
     document.getElementById('formEnUso')?.addEventListener('submit', registrarEnUso);
 
+    // Preview de imagen
+    document.getElementById('materialImagen')?.addEventListener('change', previsualizarImagen);
+
     // Selects de material con info de disponibilidad
     document.getElementById('salidaMaterialId')?.addEventListener('change', mostrarDisponible('salida'));
     document.getElementById('prestamoMaterialId')?.addEventListener('change', mostrarDisponible('prestamo'));
@@ -107,9 +110,12 @@ function renderizarInventario() {
     }
 
     tbody.innerHTML = materialesData.map(m => `
-        <tr class="${m.estado_clase}">
+        <tr class="${m.estado_clase}" data-material-id="${m.id}" data-imagen="${m.imagen_ruta || ''}" style="cursor: ${m.imagen_ruta ? 'pointer' : 'default'};" title="${m.imagen_ruta ? 'Click para ver imagen' : 'Sin imagen'}">
             <td><strong>${m.codigo}</strong></td>
-            <td>${m.nombre}</td>
+            <td>
+                ${m.imagen_ruta ? '<i class="fas fa-image" style="color: #4CAF50; margin-right: 5px;"></i>' : ''}
+                ${m.nombre}
+            </td>
             <td>${m.descripcion || '-'}</td>
             <td><span class="badge">${m.categoria || '-'}</span></td>
             <td>${m.ubicacion || '-'}</td>
@@ -118,15 +124,31 @@ function renderizarInventario() {
             <td>${m.stock_minimo}</td>
             <td>$${parseFloat(m.costo_unitario || 0).toFixed(2)}</td>
             <td>
-                <button class="btn btn-sm btn-primary" onclick="editarMaterial(${m.id})">
+                <button class="btn btn-sm btn-primary" onclick="editarMaterial(${m.id}); event.stopPropagation();">
                     <i class="fas fa-edit"></i>
                 </button>
-                <button class="btn btn-sm btn-danger" onclick="eliminarMaterial(${m.id}, '${m.nombre}')">
+                <button class="btn btn-sm btn-danger" onclick="eliminarMaterial(${m.id}, '${m.nombre}'); event.stopPropagation();">
                     <i class="fas fa-trash"></i>
                 </button>
             </td>
         </tr>
     `).join('');
+
+    // Agregar eventos de click a las filas
+    tbody.querySelectorAll('tr[data-material-id]').forEach(row => {
+        row.addEventListener('click', function(e) {
+            // No abrir imagen si se hace click en botones
+            if (e.target.closest('button')) return;
+
+            const imagenRuta = this.dataset.imagen;
+            const materialId = this.dataset.materialId;
+
+            if (imagenRuta) {
+                const material = materialesData.find(m => m.id == materialId);
+                mostrarModalImagen(imagenRuta, material);
+            }
+        });
+    });
 }
 
 function filtrarInventario() {
@@ -151,11 +173,14 @@ function mostrarModalAgregar() {
     document.getElementById('modalTitle').innerHTML = '<i class="fas fa-plus"></i> Agregar Material';
     document.getElementById('formMaterial').reset();
     document.getElementById('materialId').value = '';
+    document.getElementById('materialImagenRuta').value = '';
+    document.getElementById('imagenPreview').innerHTML = '';
     document.getElementById('modalMaterial').classList.add('active');
 }
 
 function cerrarModal() {
     document.getElementById('modalMaterial').classList.remove('active');
+    document.getElementById('imagenPreview').innerHTML = '';
     editandoMaterialId = null;
 }
 
@@ -178,6 +203,21 @@ async function editarMaterial(id) {
         document.getElementById('materialUbicacion').value = material.ubicacion || '';
         document.getElementById('materialCosto').value = material.costo_unitario || 0;
         document.getElementById('materialNotas').value = material.notas || '';
+        document.getElementById('materialImagenRuta').value = material.imagen_ruta || '';
+
+        // Mostrar imagen actual si existe
+        const previewDiv = document.getElementById('imagenPreview');
+        if (material.imagen_ruta) {
+            previewDiv.innerHTML = `
+                <div style="margin-top: 10px;">
+                    <p style="color: #666; margin-bottom: 5px;">Imagen actual:</p>
+                    <img src="/imagenes_materiales/${material.imagen_ruta}" alt="Imagen actual" style="max-width: 200px; max-height: 200px; border-radius: 4px; border: 2px solid #ddd;">
+                    <p style="color: #666; font-size: 0.85em; margin-top: 5px;">Suba una nueva imagen para reemplazarla</p>
+                </div>
+            `;
+        } else {
+            previewDiv.innerHTML = '';
+        }
 
         // Deshabilitar campo cantidad al editar
         document.getElementById('materialCantidad').disabled = true;
@@ -193,6 +233,36 @@ async function guardarMaterial(e) {
     e.preventDefault();
 
     const id = editandoMaterialId;
+    let imagenRuta = document.getElementById('materialImagenRuta').value;
+
+    // Subir imagen si se seleccionó una nueva
+    const imagenInput = document.getElementById('materialImagen');
+    if (imagenInput.files && imagenInput.files[0]) {
+        try {
+            mostrarToast('Subiendo imagen...', 'info');
+            const formData = new FormData();
+            formData.append('imagen', imagenInput.files[0]);
+
+            const uploadResponse = await fetch('/api/upload-imagen', {
+                method: 'POST',
+                body: formData
+            });
+
+            const uploadResult = await uploadResponse.json();
+
+            if (uploadResponse.ok) {
+                imagenRuta = uploadResult.imagen_ruta;
+            } else {
+                mostrarToast(uploadResult.error, 'error');
+                return;
+            }
+        } catch (error) {
+            mostrarToast('Error al subir imagen', 'error');
+            console.error(error);
+            return;
+        }
+    }
+
     const data = {
         codigo: document.getElementById('materialCodigo').value,
         nombre: document.getElementById('materialNombre').value,
@@ -202,7 +272,8 @@ async function guardarMaterial(e) {
         stock_minimo: parseFloat(document.getElementById('materialStockMinimo').value) || 0,
         ubicacion: document.getElementById('materialUbicacion').value,
         costo_unitario: parseFloat(document.getElementById('materialCosto').value) || 0,
-        notas: document.getElementById('materialNotas').value
+        notas: document.getElementById('materialNotas').value,
+        imagen_ruta: imagenRuta
     };
 
     // Solo incluir cantidad_actual al crear nuevo
@@ -684,6 +755,78 @@ function mostrarToast(mensaje, tipo = 'info') {
         toast.classList.remove('show');
     }, 3000);
 }
+
+// ================================
+// IMÁGENES
+// ================================
+function previsualizarImagen(e) {
+    const file = e.target.files[0];
+    const previewDiv = document.getElementById('imagenPreview');
+
+    if (file) {
+        // Validar tamaño (16MB)
+        if (file.size > 16 * 1024 * 1024) {
+            mostrarToast('La imagen es demasiado grande. Máximo 16MB', 'error');
+            e.target.value = '';
+            previewDiv.innerHTML = '';
+            return;
+        }
+
+        // Validar tipo
+        const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'];
+        if (!validTypes.includes(file.type)) {
+            mostrarToast('Formato no válido. Use PNG, JPG, JPEG, GIF o WEBP', 'error');
+            e.target.value = '';
+            previewDiv.innerHTML = '';
+            return;
+        }
+
+        // Mostrar preview
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            previewDiv.innerHTML = `
+                <div style="margin-top: 10px;">
+                    <p style="color: #666; margin-bottom: 5px;">Vista previa:</p>
+                    <img src="${event.target.result}" alt="Preview" style="max-width: 200px; max-height: 200px; border-radius: 4px; border: 2px solid #4CAF50;">
+                    <p style="color: #666; font-size: 0.85em; margin-top: 5px;">${file.name} (${(file.size / 1024).toFixed(2)} KB)</p>
+                </div>
+            `;
+        };
+        reader.readAsDataURL(file);
+    } else {
+        previewDiv.innerHTML = '';
+    }
+}
+
+function mostrarModalImagen(imagenRuta, material) {
+    const modal = document.getElementById('modalImagen');
+    const img = document.getElementById('modalImagenImg');
+    const title = document.getElementById('modalImagenTitle');
+    const info = document.getElementById('modalImagenInfo');
+
+    img.src = `/imagenes_materiales/${imagenRuta}`;
+    title.innerHTML = `<i class="fas fa-image"></i> ${material.nombre}`;
+    info.textContent = `Código: ${material.codigo} | Categoría: ${material.categoria || 'N/A'} | Ubicación: ${material.ubicacion || 'N/A'}`;
+
+    modal.classList.add('active');
+}
+
+function cerrarModalImagen() {
+    const modal = document.getElementById('modalImagen');
+    modal.classList.remove('active');
+}
+
+// Cerrar modal de imagen al hacer click fuera
+document.getElementById('modalImagen')?.addEventListener('click', function(e) {
+    if (e.target === this) cerrarModalImagen();
+});
+
+// Cerrar modal de imagen con tecla Escape
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        cerrarModalImagen();
+    }
+});
 
 // Cargar movimientos cuando se cambia a esas pestañas
 document.addEventListener('DOMContentLoaded', function() {
