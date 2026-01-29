@@ -152,6 +152,35 @@ La aplicación web utiliza la **misma base de datos** que la versión de escrito
 
 ## 🔧 SOLUCIÓN DE PROBLEMAS
 
+### Error "database is locked" al guardar
+
+**Problema**: Al editar un material y dar "Guardar" aparece "database is locked" o "Base de datos ocupada"
+
+**Causas comunes**:
+- La aplicación de escritorio está abierta al mismo tiempo
+- Hay transacciones sin cerrar
+- La base de datos está siendo usada por otro proceso
+
+**Solución**:
+1. Cierra la aplicación de escritorio (inventario_ptar.py) si está abierta
+2. Detén el servidor web Flask
+3. Ejecuta el script de reparación:
+   ```bash
+   python fix_database.py
+   ```
+4. Reinicia el servidor web
+
+**Si el problema persiste**:
+1. Verifica que no haya otros procesos usando la base de datos:
+   - Cierra cualquier herramienta de SQLite (DB Browser, etc.)
+   - Reinicia tu computadora si es necesario
+2. Haz un respaldo de la base de datos
+3. El script de reparación ya habilitó el modo WAL para mejor concurrencia
+
+**Prevención**:
+- Evita usar la versión web y escritorio simultáneamente
+- Si necesitas acceso simultáneo, usa solo la versión web desde múltiples navegadores
+
 ### El servidor no inicia
 
 **Problema**: Error "Address already in use"
