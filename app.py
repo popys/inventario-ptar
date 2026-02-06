@@ -21,8 +21,10 @@ def allowed_file(filename):
 
 def get_db_connection():
     """Obtiene conexión a la base de datos"""
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, timeout=30.0)
     conn.row_factory = sqlite3.Row
+    # Configurar modo WAL para mejor concurrencia
+    conn.execute('PRAGMA journal_mode=WAL')
     return conn
 
 def init_database():
@@ -184,6 +186,7 @@ def get_material(id):
 def create_material():
     """Crea un nuevo material"""
     data = request.json
+    conn = None
 
     try:
         conn = get_db_connection()
@@ -211,19 +214,32 @@ def create_material():
 
         conn.commit()
         material_id = cursor.lastrowid
-        conn.close()
 
         return jsonify({'success': True, 'id': material_id, 'message': 'Material creado exitosamente'}), 201
 
     except sqlite3.IntegrityError:
+        if conn:
+            conn.rollback()
         return jsonify({'error': 'El código de material ya existe'}), 400
-    except Exception as e:
+    except sqlite3.OperationalError as e:
+        if conn:
+            conn.rollback()
+        if 'locked' in str(e).lower():
+            return jsonify({'error': 'Base de datos ocupada. Por favor intente nuevamente.'}), 503
         return jsonify({'error': str(e)}), 500
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if conn:
+            conn.close()
 
 @app.route('/api/materiales/<int:id>', methods=['PUT'])
 def update_material(id):
     """Actualiza un material existente"""
     data = request.json
+    conn = None
 
     try:
         conn = get_db_connection()
@@ -247,27 +263,49 @@ def update_material(id):
         ))
 
         conn.commit()
-        conn.close()
-
         return jsonify({'success': True, 'message': 'Material actualizado exitosamente'})
 
     except sqlite3.IntegrityError:
+        if conn:
+            conn.rollback()
         return jsonify({'error': 'El código de material ya existe'}), 400
-    except Exception as e:
+    except sqlite3.OperationalError as e:
+        if conn:
+            conn.rollback()
+        if 'locked' in str(e).lower():
+            return jsonify({'error': 'Base de datos ocupada. Por favor intente nuevamente.'}), 503
         return jsonify({'error': str(e)}), 500
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if conn:
+            conn.close()
 
 @app.route('/api/materiales/<int:id>', methods=['DELETE'])
 def delete_material(id):
     """Elimina un material"""
+    conn = None
     try:
         conn = get_db_connection()
         conn.execute('DELETE FROM materiales WHERE id = ?', (id,))
         conn.commit()
-        conn.close()
 
         return jsonify({'success': True, 'message': 'Material eliminado exitosamente'})
-    except Exception as e:
+    except sqlite3.OperationalError as e:
+        if conn:
+            conn.rollback()
+        if 'locked' in str(e).lower():
+            return jsonify({'error': 'Base de datos ocupada. Por favor intente nuevamente.'}), 503
         return jsonify({'error': str(e)}), 500
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if conn:
+            conn.close()
 
 # ===============================
 # API - MOVIMIENTOS
@@ -302,6 +340,7 @@ def get_movimientos():
 def registrar_entrada():
     """Registra entrada de material"""
     data = request.json
+    conn = None
 
     try:
         conn = get_db_connection()
@@ -329,17 +368,28 @@ def registrar_entrada():
         ''', (data['cantidad'], data['material_id']))
 
         conn.commit()
-        conn.close()
 
         return jsonify({'success': True, 'message': 'Entrada registrada exitosamente'})
 
-    except Exception as e:
+    except sqlite3.OperationalError as e:
+        if conn:
+            conn.rollback()
+        if 'locked' in str(e).lower():
+            return jsonify({'error': 'Base de datos ocupada. Por favor intente nuevamente.'}), 503
         return jsonify({'error': str(e)}), 500
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if conn:
+            conn.close()
 
 @app.route('/api/movimientos/salida', methods=['POST'])
 def registrar_salida():
     """Registra salida de material"""
     data = request.json
+    conn = None
 
     try:
         conn = get_db_connection()
@@ -377,12 +427,22 @@ def registrar_salida():
         ''', (data['cantidad'], data['material_id']))
 
         conn.commit()
-        conn.close()
 
         return jsonify({'success': True, 'message': 'Salida registrada exitosamente'})
 
-    except Exception as e:
+    except sqlite3.OperationalError as e:
+        if conn:
+            conn.rollback()
+        if 'locked' in str(e).lower():
+            return jsonify({'error': 'Base de datos ocupada. Por favor intente nuevamente.'}), 503
         return jsonify({'error': str(e)}), 500
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if conn:
+            conn.close()
 
 # ===============================
 # API - PRÉSTAMOS
@@ -407,6 +467,7 @@ def get_prestamos():
 def registrar_prestamo():
     """Registra un préstamo de material"""
     data = request.json
+    conn = None
 
     try:
         conn = get_db_connection()
@@ -458,16 +519,27 @@ def registrar_prestamo():
         ))
 
         conn.commit()
-        conn.close()
 
         return jsonify({'success': True, 'message': 'Préstamo registrado exitosamente'})
 
-    except Exception as e:
+    except sqlite3.OperationalError as e:
+        if conn:
+            conn.rollback()
+        if 'locked' in str(e).lower():
+            return jsonify({'error': 'Base de datos ocupada. Por favor intente nuevamente.'}), 503
         return jsonify({'error': str(e)}), 500
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if conn:
+            conn.close()
 
 @app.route('/api/prestamos/<int:id>/devolver', methods=['POST'])
 def devolver_prestamo(id):
     """Registra la devolución de un préstamo"""
+    conn = None
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -510,12 +582,22 @@ def devolver_prestamo(id):
         ))
 
         conn.commit()
-        conn.close()
 
         return jsonify({'success': True, 'message': 'Préstamo devuelto exitosamente'})
 
-    except Exception as e:
+    except sqlite3.OperationalError as e:
+        if conn:
+            conn.rollback()
+        if 'locked' in str(e).lower():
+            return jsonify({'error': 'Base de datos ocupada. Por favor intente nuevamente.'}), 503
         return jsonify({'error': str(e)}), 500
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if conn:
+            conn.close()
 
 # ===============================
 # API - MATERIAL EN USO
@@ -539,6 +621,7 @@ def get_material_en_uso():
 def registrar_material_uso():
     """Registra material en uso"""
     data = request.json
+    conn = None
 
     try:
         conn = get_db_connection()
@@ -590,12 +673,22 @@ def registrar_material_uso():
         ))
 
         conn.commit()
-        conn.close()
 
         return jsonify({'success': True, 'message': 'Material en uso registrado exitosamente'})
 
-    except Exception as e:
+    except sqlite3.OperationalError as e:
+        if conn:
+            conn.rollback()
+        if 'locked' in str(e).lower():
+            return jsonify({'error': 'Base de datos ocupada. Por favor intente nuevamente.'}), 503
         return jsonify({'error': str(e)}), 500
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if conn:
+            conn.close()
 
 # ===============================
 # API - ESTADÍSTICAS

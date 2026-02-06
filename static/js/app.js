@@ -26,6 +26,19 @@ function inicializarEventos() {
     document.getElementById('filterUbicacion')?.addEventListener('change', filtrarInventario);
     document.getElementById('filterEstado')?.addEventListener('change', filtrarInventario);
 
+    // Filtros de búsqueda de materiales en otros tabs
+    document.getElementById('searchEntradaMaterial')?.addEventListener('input', cargarMaterialesEntrada);
+    document.getElementById('filterEntradaCategoria')?.addEventListener('change', cargarMaterialesEntrada);
+
+    document.getElementById('searchSalidaMaterial')?.addEventListener('input', cargarMaterialesSalida);
+    document.getElementById('filterSalidaCategoria')?.addEventListener('change', cargarMaterialesSalida);
+
+    document.getElementById('searchPrestamoMaterial')?.addEventListener('input', cargarMaterialesPrestamo);
+    document.getElementById('filterPrestamoCategoria')?.addEventListener('change', cargarMaterialesPrestamo);
+
+    document.getElementById('searchEnUsoMaterial')?.addEventListener('input', cargarMaterialesEnUso);
+    document.getElementById('filterEnUsoCategoria')?.addEventListener('change', cargarMaterialesEnUso);
+
     // Forms
     document.getElementById('formMaterial')?.addEventListener('submit', guardarMaterial);
     document.getElementById('formEntrada')?.addEventListener('submit', registrarEntrada);
@@ -35,11 +48,6 @@ function inicializarEventos() {
 
     // Preview de imagen
     document.getElementById('materialImagen')?.addEventListener('change', previsualizarImagen);
-
-    // Selects de material con info de disponibilidad
-    document.getElementById('salidaMaterialId')?.addEventListener('change', mostrarDisponible('salida'));
-    document.getElementById('prestamoMaterialId')?.addEventListener('change', mostrarDisponible('prestamo'));
-    document.getElementById('enUsoMaterialId')?.addEventListener('change', mostrarDisponible('enUso'));
 
     // Cerrar modal al hacer click fuera
     document.getElementById('modalMaterial')?.addEventListener('click', function(e) {
@@ -53,7 +61,12 @@ function cargarDatosIniciales() {
     cargarMovimientos();
     cargarPrestamos();
     cargarMaterialEnUso();
-    cargarSelectsMaterial();
+
+    // Cargar materiales en las tablas de selección
+    cargarMaterialesEntrada();
+    cargarMaterialesSalida();
+    cargarMaterialesPrestamo();
+    cargarMaterialesEnUso();
 }
 
 // ================================
@@ -76,6 +89,162 @@ function cambiarTab(tabName) {
     if (tabName === 'reportes') {
         actualizarEstadisticas();
     }
+}
+
+// ================================
+// SELECCIÓN DE MATERIALES
+// ================================
+let materialSeleccionadoEntrada = null;
+let materialSeleccionadoSalida = null;
+let materialSeleccionadoPrestamo = null;
+let materialSeleccionadoEnUso = null;
+
+async function cargarMaterialesEntrada() {
+    try {
+        const busqueda = document.getElementById('searchEntradaMaterial')?.value || '';
+        const categoria = document.getElementById('filterEntradaCategoria')?.value || '';
+
+        const params = new URLSearchParams({ busqueda, categoria });
+        const response = await fetch(`/api/materiales?${params}`);
+        const materiales = await response.json();
+
+        const tbody = document.getElementById('entradaMaterialesTableBody');
+        if (materiales.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center">No se encontraron materiales</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = materiales.map(m => `
+            <tr style="cursor: pointer;" onclick="seleccionarMaterialEntrada(${m.id}, '${m.nombre.replace(/'/g, "\\'")}', ${m.cantidad_actual}, '${m.unidad}')">
+                <td>${m.codigo}</td>
+                <td>${m.nombre}</td>
+                <td>${m.categoria || '-'}</td>
+                <td><strong>${m.cantidad_actual}</strong></td>
+                <td>${m.unidad || '-'}</td>
+            </tr>
+        `).join('');
+    } catch (error) {
+        console.error('Error al cargar materiales:', error);
+    }
+}
+
+function seleccionarMaterialEntrada(id, nombre, stock, unidad) {
+    materialSeleccionadoEntrada = { id, nombre, stock, unidad };
+    document.getElementById('entradaMaterialId').value = id;
+    document.getElementById('entradaMaterialNombre').textContent = nombre;
+    document.getElementById('entradaMaterialStock').textContent = `${stock} ${unidad}`;
+    document.getElementById('entradaMaterialSeleccionado').style.display = 'block';
+}
+
+async function cargarMaterialesSalida() {
+    try {
+        const busqueda = document.getElementById('searchSalidaMaterial')?.value || '';
+        const categoria = document.getElementById('filterSalidaCategoria')?.value || '';
+
+        const params = new URLSearchParams({ busqueda, categoria });
+        const response = await fetch(`/api/materiales?${params}`);
+        const materiales = await response.json();
+
+        const tbody = document.getElementById('salidaMaterialesTableBody');
+        if (materiales.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center">No se encontraron materiales</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = materiales.map(m => `
+            <tr style="cursor: pointer;" onclick="seleccionarMaterialSalida(${m.id}, '${m.nombre.replace(/'/g, "\\'")}', ${m.cantidad_actual}, '${m.unidad}')">
+                <td>${m.codigo}</td>
+                <td>${m.nombre}</td>
+                <td>${m.categoria || '-'}</td>
+                <td><strong>${m.cantidad_actual}</strong></td>
+                <td>${m.unidad || '-'}</td>
+            </tr>
+        `).join('');
+    } catch (error) {
+        console.error('Error al cargar materiales:', error);
+    }
+}
+
+function seleccionarMaterialSalida(id, nombre, stock, unidad) {
+    materialSeleccionadoSalida = { id, nombre, stock, unidad };
+    document.getElementById('salidaMaterialId').value = id;
+    document.getElementById('salidaMaterialNombre').textContent = nombre;
+    document.getElementById('salidaMaterialStock').textContent = `${stock} ${unidad}`;
+    document.getElementById('salidaMaterialSeleccionado').style.display = 'block';
+}
+
+async function cargarMaterialesPrestamo() {
+    try {
+        const busqueda = document.getElementById('searchPrestamoMaterial')?.value || '';
+        const categoria = document.getElementById('filterPrestamoCategoria')?.value || '';
+
+        const params = new URLSearchParams({ busqueda, categoria });
+        const response = await fetch(`/api/materiales?${params}`);
+        const materiales = await response.json();
+
+        const tbody = document.getElementById('prestamoMaterialesTableBody');
+        if (materiales.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center">No se encontraron materiales</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = materiales.map(m => `
+            <tr style="cursor: pointer;" onclick="seleccionarMaterialPrestamo(${m.id}, '${m.nombre.replace(/'/g, "\\'")}', ${m.cantidad_actual}, '${m.unidad}')">
+                <td>${m.codigo}</td>
+                <td>${m.nombre}</td>
+                <td>${m.categoria || '-'}</td>
+                <td><strong>${m.cantidad_actual}</strong></td>
+                <td>${m.unidad || '-'}</td>
+            </tr>
+        `).join('');
+    } catch (error) {
+        console.error('Error al cargar materiales:', error);
+    }
+}
+
+function seleccionarMaterialPrestamo(id, nombre, stock, unidad) {
+    materialSeleccionadoPrestamo = { id, nombre, stock, unidad };
+    document.getElementById('prestamoMaterialId').value = id;
+    document.getElementById('prestamoMaterialNombre').textContent = nombre;
+    document.getElementById('prestamoMaterialStock').textContent = `${stock} ${unidad}`;
+    document.getElementById('prestamoMaterialSeleccionado').style.display = 'block';
+}
+
+async function cargarMaterialesEnUso() {
+    try {
+        const busqueda = document.getElementById('searchEnUsoMaterial')?.value || '';
+        const categoria = document.getElementById('filterEnUsoCategoria')?.value || '';
+
+        const params = new URLSearchParams({ busqueda, categoria });
+        const response = await fetch(`/api/materiales?${params}`);
+        const materiales = await response.json();
+
+        const tbody = document.getElementById('enUsoMaterialesTableBody');
+        if (materiales.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center">No se encontraron materiales</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = materiales.map(m => `
+            <tr style="cursor: pointer;" onclick="seleccionarMaterialEnUso(${m.id}, '${m.nombre.replace(/'/g, "\\'")}', ${m.cantidad_actual}, '${m.unidad}')">
+                <td>${m.codigo}</td>
+                <td>${m.nombre}</td>
+                <td>${m.categoria || '-'}</td>
+                <td><strong>${m.cantidad_actual}</strong></td>
+                <td>${m.unidad || '-'}</td>
+            </tr>
+        `).join('');
+    } catch (error) {
+        console.error('Error al cargar materiales:', error);
+    }
+}
+
+function seleccionarMaterialEnUso(id, nombre, stock, unidad) {
+    materialSeleccionadoEnUso = { id, nombre, stock, unidad };
+    document.getElementById('enUsoMaterialId').value = id;
+    document.getElementById('enUsoMaterialNombre').textContent = nombre;
+    document.getElementById('enUsoMaterialStock').textContent = `${stock} ${unidad}`;
+    document.getElementById('enUsoMaterialSeleccionado').style.display = 'block';
 }
 
 // ================================
@@ -390,8 +559,13 @@ function mostrarDisponible(tipo) {
 async function registrarEntrada(e) {
     e.preventDefault();
 
+    if (!materialSeleccionadoEntrada) {
+        mostrarToast('Por favor, selecciona un material de la lista', 'warning');
+        return;
+    }
+
     const data = {
-        material_id: parseInt(document.getElementById('entradaMaterialId').value),
+        material_id: materialSeleccionadoEntrada.id,
         cantidad: parseFloat(document.getElementById('entradaCantidad').value),
         origen: document.getElementById('entradaOrigen').value,
         responsable: document.getElementById('entradaResponsable').value,
@@ -410,7 +584,11 @@ async function registrarEntrada(e) {
         if (response.ok) {
             mostrarToast(result.message, 'success');
             document.getElementById('formEntrada').reset();
+            document.getElementById('entradaMaterialId').value = '';
+            document.getElementById('entradaMaterialSeleccionado').style.display = 'none';
+            materialSeleccionadoEntrada = null;
             cargarMateriales();
+            cargarMaterialesEntrada();
             cargarMovimientos('ENTRADA', 'entradasTableBody');
             actualizarEstadisticas();
         } else {
@@ -428,8 +606,13 @@ async function registrarEntrada(e) {
 async function registrarSalida(e) {
     e.preventDefault();
 
+    if (!materialSeleccionadoSalida) {
+        mostrarToast('Por favor, selecciona un material de la lista', 'warning');
+        return;
+    }
+
     const data = {
-        material_id: parseInt(document.getElementById('salidaMaterialId').value),
+        material_id: materialSeleccionadoSalida.id,
         cantidad: parseFloat(document.getElementById('salidaCantidad').value),
         destino: document.getElementById('salidaDestino').value,
         responsable: document.getElementById('salidaResponsable').value,
@@ -448,8 +631,11 @@ async function registrarSalida(e) {
         if (response.ok) {
             mostrarToast(result.message, 'success');
             document.getElementById('formSalida').reset();
-            document.getElementById('salidaDisponible').textContent = '';
+            document.getElementById('salidaMaterialId').value = '';
+            document.getElementById('salidaMaterialSeleccionado').style.display = 'none';
+            materialSeleccionadoSalida = null;
             cargarMateriales();
+            cargarMaterialesSalida();
             cargarMovimientos('SALIDA', 'salidasTableBody');
             actualizarEstadisticas();
         } else {
@@ -467,8 +653,13 @@ async function registrarSalida(e) {
 async function registrarPrestamo(e) {
     e.preventDefault();
 
+    if (!materialSeleccionadoPrestamo) {
+        mostrarToast('Por favor, selecciona un material de la lista', 'warning');
+        return;
+    }
+
     const data = {
-        material_id: parseInt(document.getElementById('prestamoMaterialId').value),
+        material_id: materialSeleccionadoPrestamo.id,
         cantidad: parseFloat(document.getElementById('prestamoCantidad').value),
         prestado_a: document.getElementById('prestamoPrestadoA').value,
         area_destino: document.getElementById('prestamoArea').value,
@@ -487,8 +678,11 @@ async function registrarPrestamo(e) {
         if (response.ok) {
             mostrarToast(result.message, 'success');
             document.getElementById('formPrestamo').reset();
-            document.getElementById('prestamoDisponible').textContent = '';
+            document.getElementById('prestamoMaterialId').value = '';
+            document.getElementById('prestamoMaterialSeleccionado').style.display = 'none';
+            materialSeleccionadoPrestamo = null;
             cargarMateriales();
+            cargarMaterialesPrestamo();
             cargarPrestamos();
             actualizarEstadisticas();
         } else {
@@ -563,8 +757,13 @@ async function devolverPrestamo(id) {
 async function registrarEnUso(e) {
     e.preventDefault();
 
+    if (!materialSeleccionadoEnUso) {
+        mostrarToast('Por favor, selecciona un material de la lista', 'warning');
+        return;
+    }
+
     const data = {
-        material_id: parseInt(document.getElementById('enUsoMaterialId').value),
+        material_id: materialSeleccionadoEnUso.id,
         cantidad: parseFloat(document.getElementById('enUsoCantidad').value),
         equipo_instalacion: document.getElementById('enUsoEquipo').value,
         responsable: document.getElementById('enUsoResponsable').value,
@@ -583,8 +782,11 @@ async function registrarEnUso(e) {
         if (response.ok) {
             mostrarToast(result.message, 'success');
             document.getElementById('formEnUso').reset();
-            document.getElementById('enUsoDisponible').textContent = '';
+            document.getElementById('enUsoMaterialId').value = '';
+            document.getElementById('enUsoMaterialSeleccionado').style.display = 'none';
+            materialSeleccionadoEnUso = null;
             cargarMateriales();
+            cargarMaterialesEnUso();
             cargarMaterialEnUso();
             actualizarEstadisticas();
         } else {
