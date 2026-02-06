@@ -115,7 +115,12 @@ async function cargarMaterialesEntrada() {
         }
 
         tbody.innerHTML = materiales.map(m => `
-            <tr style="cursor: pointer;" onclick="seleccionarMaterialEntrada(${m.id}, '${m.nombre.replace(/'/g, "\\'")}', ${m.cantidad_actual}, '${m.unidad}')">
+            <tr style="cursor: pointer;"
+                data-material-id="${m.id}"
+                data-material-nombre="${m.nombre.replace(/"/g, '&quot;')}"
+                data-material-stock="${m.cantidad_actual}"
+                data-material-unidad="${m.unidad || ''}"
+                class="material-row-entrada">
                 <td>${m.codigo}</td>
                 <td>${m.nombre}</td>
                 <td>${m.categoria || '-'}</td>
@@ -123,6 +128,17 @@ async function cargarMaterialesEntrada() {
                 <td>${m.unidad || '-'}</td>
             </tr>
         `).join('');
+
+        // Agregar event listeners
+        tbody.querySelectorAll('.material-row-entrada').forEach(row => {
+            row.addEventListener('click', function() {
+                const id = parseInt(this.dataset.materialId);
+                const nombre = this.dataset.materialNombre;
+                const stock = parseFloat(this.dataset.materialStock);
+                const unidad = this.dataset.materialUnidad;
+                seleccionarMaterialEntrada(id, nombre, stock, unidad);
+            });
+        });
     } catch (error) {
         console.error('Error al cargar materiales:', error);
     }
@@ -152,7 +168,12 @@ async function cargarMaterialesSalida() {
         }
 
         tbody.innerHTML = materiales.map(m => `
-            <tr style="cursor: pointer;" onclick="seleccionarMaterialSalida(${m.id}, '${m.nombre.replace(/'/g, "\\'")}', ${m.cantidad_actual}, '${m.unidad}')">
+            <tr style="cursor: pointer;"
+                data-material-id="${m.id}"
+                data-material-nombre="${m.nombre.replace(/"/g, '&quot;')}"
+                data-material-stock="${m.cantidad_actual}"
+                data-material-unidad="${m.unidad || ''}"
+                class="material-row-salida">
                 <td>${m.codigo}</td>
                 <td>${m.nombre}</td>
                 <td>${m.categoria || '-'}</td>
@@ -160,6 +181,17 @@ async function cargarMaterialesSalida() {
                 <td>${m.unidad || '-'}</td>
             </tr>
         `).join('');
+
+        // Agregar event listeners
+        tbody.querySelectorAll('.material-row-salida').forEach(row => {
+            row.addEventListener('click', function() {
+                const id = parseInt(this.dataset.materialId);
+                const nombre = this.dataset.materialNombre;
+                const stock = parseFloat(this.dataset.materialStock);
+                const unidad = this.dataset.materialUnidad;
+                seleccionarMaterialSalida(id, nombre, stock, unidad);
+            });
+        });
     } catch (error) {
         console.error('Error al cargar materiales:', error);
     }
@@ -189,7 +221,12 @@ async function cargarMaterialesPrestamo() {
         }
 
         tbody.innerHTML = materiales.map(m => `
-            <tr style="cursor: pointer;" onclick="seleccionarMaterialPrestamo(${m.id}, '${m.nombre.replace(/'/g, "\\'")}', ${m.cantidad_actual}, '${m.unidad}')">
+            <tr style="cursor: pointer;"
+                data-material-id="${m.id}"
+                data-material-nombre="${m.nombre.replace(/"/g, '&quot;')}"
+                data-material-stock="${m.cantidad_actual}"
+                data-material-unidad="${m.unidad || ''}"
+                class="material-row-prestamo">
                 <td>${m.codigo}</td>
                 <td>${m.nombre}</td>
                 <td>${m.categoria || '-'}</td>
@@ -197,6 +234,17 @@ async function cargarMaterialesPrestamo() {
                 <td>${m.unidad || '-'}</td>
             </tr>
         `).join('');
+
+        // Agregar event listeners
+        tbody.querySelectorAll('.material-row-prestamo').forEach(row => {
+            row.addEventListener('click', function() {
+                const id = parseInt(this.dataset.materialId);
+                const nombre = this.dataset.materialNombre;
+                const stock = parseFloat(this.dataset.materialStock);
+                const unidad = this.dataset.materialUnidad;
+                seleccionarMaterialPrestamo(id, nombre, stock, unidad);
+            });
+        });
     } catch (error) {
         console.error('Error al cargar materiales:', error);
     }
@@ -226,7 +274,12 @@ async function cargarMaterialesEnUso() {
         }
 
         tbody.innerHTML = materiales.map(m => `
-            <tr style="cursor: pointer;" onclick="seleccionarMaterialEnUso(${m.id}, '${m.nombre.replace(/'/g, "\\'")}', ${m.cantidad_actual}, '${m.unidad}')">
+            <tr style="cursor: pointer;"
+                data-material-id="${m.id}"
+                data-material-nombre="${m.nombre.replace(/"/g, '&quot;')}"
+                data-material-stock="${m.cantidad_actual}"
+                data-material-unidad="${m.unidad || ''}"
+                class="material-row-enuso">
                 <td>${m.codigo}</td>
                 <td>${m.nombre}</td>
                 <td>${m.categoria || '-'}</td>
@@ -234,6 +287,17 @@ async function cargarMaterialesEnUso() {
                 <td>${m.unidad || '-'}</td>
             </tr>
         `).join('');
+
+        // Agregar event listeners
+        tbody.querySelectorAll('.material-row-enuso').forEach(row => {
+            row.addEventListener('click', function() {
+                const id = parseInt(this.dataset.materialId);
+                const nombre = this.dataset.materialNombre;
+                const stock = parseFloat(this.dataset.materialStock);
+                const unidad = this.dataset.materialUnidad;
+                seleccionarMaterialEnUso(id, nombre, stock, unidad);
+            });
+        });
     } catch (error) {
         console.error('Error al cargar materiales:', error);
     }

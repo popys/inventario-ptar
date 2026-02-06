@@ -2,7 +2,13 @@
   "permissions": {
     "allow": [
       "Bash(python fix_database.py:*)",
-      "Bash(python -m py_compile:*)"
+      "Bash(python -m py_compile:*)",
+      "Bash(git check-ignore:*)",
+      "Bash(ssh:*)",
+      "Bash(sshpass -p 'agua2225' ssh -o StrictHostKeyChecking=no PTAR1-9437@100.87.119.88 \"cd Desktop/inventario-ptar && pwd && git status\")",
+      "Bash(ls:*)",
+      "Bash(sqlite3:*)",
+      "Bash(python:*)"
     ]
   }
 }
