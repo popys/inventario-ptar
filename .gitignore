@@ -1,0 +1,53 @@
+# Base de datos
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+*.egg-info/
+dist/
+build/
+
+# Entornos virtuales
+.env
+.venv
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-project
+*.sublime-workspace
+
+# Logs
+*.log
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# PM2
+pm2/
+
+# Backups
+*.backup
+*.BACKUP
+*.bak
+*.MIS_DATOS
+
+# Archivos temporales
+*.tmp
+*.temp
+~*
