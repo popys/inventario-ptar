@@ -162,10 +162,27 @@ class InventarioPTAR:
         self.filtro_categoria = ctk.StringVar(value="Todas")
         self.filtro_ubicacion = ctk.StringVar(value="Todas")
         self.filtro_estado = ctk.StringVar(value="Todos")
+
+        # Variables de búsqueda para otros módulos
+        self.busqueda_entrada_var = ctk.StringVar()
+        self.busqueda_salida_var = ctk.StringVar()
+        self.busqueda_prestamo_var = ctk.StringVar()
+        self.filtro_estado_prestamo = ctk.StringVar(value="Todos")
+        self.busqueda_uso_var = ctk.StringVar()
         
         # Crear interfaz
         self.crear_interfaz()
         self.cargar_datos()
+
+        # Cargar datos iniciales en cada tab
+        self.filtrar_materiales_entrada()
+        self.filtrar_materiales_salida()
+        self.filtrar_materiales_prestamo()
+        self.filtrar_materiales_uso()
+        self.cargar_historial_entradas()
+        self.cargar_historial_salidas()
+        self.cargar_prestamos()
+        self.cargar_material_en_uso()
         
     def init_database(self):
         """Inicializa la base de datos SQLite"""
@@ -355,61 +372,115 @@ class InventarioPTAR:
         
     def crear_tab_entrada(self):
         """Crea la pestaña de entrada de material"""
-        
-        frame = ctk.CTkFrame(self.tab_entrada)
-        frame.pack(fill="both", expand=True, padx=20, pady=20)
-        
+
         # Título
-        ctk.CTkLabel(frame, text="ENTRADA DE MATERIAL", 
-                    font=("Arial", 20, "bold")).grid(row=0, column=0, columnspan=4, pady=20)
-        
-        # Campos
-        ctk.CTkLabel(frame, text="Material:").grid(row=1, column=0, sticky="e", padx=5, pady=10)
-        self.combo_material_entrada = AutocompleteEntry(frame, width=400,
-                                                        on_select_callback=self.mostrar_stock_actual_entrada)
-        self.combo_material_entrada.grid(row=1, column=1, columnspan=3, sticky="w", padx=5, pady=10)
-        
-        # Stock actual (informativo)
-        frame_stock_actual = ctk.CTkFrame(frame, fg_color="transparent")
-        frame_stock_actual.grid(row=1, column=4, sticky="w", padx=10, pady=10)
-        
-        self.label_stock_actual_entrada = ctk.CTkLabel(frame_stock_actual, text="", 
-                                                       font=("Arial", 10),
-                                                       text_color="gray")
-        self.label_stock_actual_entrada.pack()
-        
-        ctk.CTkLabel(frame, text="Cantidad:").grid(row=2, column=0, sticky="e", padx=5, pady=10)
-        self.entry_cantidad_entrada = ctk.CTkEntry(frame, width=150)
-        self.entry_cantidad_entrada.grid(row=2, column=1, sticky="w", padx=5, pady=10)
-        
-        ctk.CTkLabel(frame, text="Origen:").grid(row=3, column=0, sticky="e", padx=5, pady=10)
-        self.entry_origen = ctk.CTkEntry(frame, width=300)
-        self.entry_origen.grid(row=3, column=1, columnspan=2, sticky="w", padx=5, pady=10)
-        
-        ctk.CTkLabel(frame, text="Responsable:").grid(row=4, column=0, sticky="e", padx=5, pady=10)
-        self.entry_responsable_entrada = ctk.CTkEntry(frame, width=300)
-        self.entry_responsable_entrada.grid(row=4, column=1, columnspan=2, sticky="w", padx=5, pady=10)
-        
-        ctk.CTkLabel(frame, text="Observaciones:").grid(row=5, column=0, sticky="ne", padx=5, pady=10)
-        self.text_obs_entrada = ctk.CTkTextbox(frame, width=400, height=100)
-        self.text_obs_entrada.grid(row=5, column=1, columnspan=3, sticky="w", padx=5, pady=10)
-        
-        # Botón
-        ctk.CTkButton(frame, text="Registrar Entrada", command=self.registrar_entrada,
-                     width=200, height=40).grid(row=6, column=0, columnspan=4, pady=30)
+        ctk.CTkLabel(self.tab_entrada, text="ENTRADA DE MATERIAL",
+                    font=("Arial", 20, "bold")).pack(pady=10)
+
+        # Frame de búsqueda de materiales
+        frame_busqueda_mat = ctk.CTkFrame(self.tab_entrada)
+        frame_busqueda_mat.pack(fill="x", padx=20, pady=10)
+
+        ctk.CTkLabel(frame_busqueda_mat, text="Buscar Material:").pack(side="left", padx=5)
+        self.entry_buscar_mat_entrada = ctk.CTkEntry(frame_busqueda_mat, width=300)
+        self.entry_buscar_mat_entrada.pack(side="left", padx=5)
+        self.entry_buscar_mat_entrada.bind('<KeyRelease>', lambda e: self.filtrar_materiales_entrada())
+
+        ctk.CTkLabel(frame_busqueda_mat, text="Categoría:").pack(side="left", padx=5)
+        categorias = ["Todas", "Fontanería y Ferretería", "Herramientas y Equipos",
+                     "Seguridad", "Limpieza", "Papelería"]
+        self.combo_cat_entrada = ctk.CTkComboBox(frame_busqueda_mat, values=categorias,
+                                                 width=180,
+                                                 command=lambda e: self.filtrar_materiales_entrada())
+        self.combo_cat_entrada.pack(side="left", padx=5)
+        self.combo_cat_entrada.set("Todas")
+
+        # Frame para lista de materiales
+        frame_lista_mat = ctk.CTkFrame(self.tab_entrada)
+        frame_lista_mat.pack(fill="both", expand=True, padx=20, pady=5)
+
+        # Treeview de materiales
+        columns_mat = ("ID", "Código", "Nombre", "Categoría", "Stock Actual", "Unidad")
+        self.tree_mat_entrada = ttk.Treeview(frame_lista_mat, columns=columns_mat,
+                                            show="headings", height=8)
+
+        self.tree_mat_entrada.heading("ID", text="ID")
+        self.tree_mat_entrada.heading("Código", text="Código")
+        self.tree_mat_entrada.heading("Nombre", text="Nombre")
+        self.tree_mat_entrada.heading("Categoría", text="Categoría")
+        self.tree_mat_entrada.heading("Stock Actual", text="Stock Actual")
+        self.tree_mat_entrada.heading("Unidad", text="Unidad")
+
+        self.tree_mat_entrada.column("ID", width=50)
+        self.tree_mat_entrada.column("Código", width=100)
+        self.tree_mat_entrada.column("Nombre", width=250)
+        self.tree_mat_entrada.column("Categoría", width=150)
+        self.tree_mat_entrada.column("Stock Actual", width=100)
+        self.tree_mat_entrada.column("Unidad", width=80)
+
+        self.tree_mat_entrada.pack(fill="both", expand=True, padx=5, pady=5)
+        self.tree_mat_entrada.bind('<<TreeviewSelect>>', self.seleccionar_material_entrada)
+
+        # Frame de datos de entrada
+        frame_datos = ctk.CTkFrame(self.tab_entrada)
+        frame_datos.pack(fill="x", padx=20, pady=10)
+
+        ctk.CTkLabel(frame_datos, text="Material Seleccionado:", font=("Arial", 12, "bold")).grid(row=0, column=0, sticky="e", padx=5, pady=5)
+        self.label_material_sel_entrada = ctk.CTkLabel(frame_datos, text="Ninguno", font=("Arial", 12))
+        self.label_material_sel_entrada.grid(row=0, column=1, sticky="w", padx=5, pady=5)
+
+        ctk.CTkLabel(frame_datos, text="Stock Actual:", font=("Arial", 10)).grid(row=0, column=2, sticky="e", padx=5, pady=5)
+        self.label_stock_entrada = ctk.CTkLabel(frame_datos, text="0", font=("Arial", 10, "bold"))
+        self.label_stock_entrada.grid(row=0, column=3, sticky="w", padx=5, pady=5)
+
+        ctk.CTkLabel(frame_datos, text="Cantidad:").grid(row=1, column=0, sticky="e", padx=5, pady=5)
+        self.entry_cantidad_entrada = ctk.CTkEntry(frame_datos, width=150)
+        self.entry_cantidad_entrada.grid(row=1, column=1, sticky="w", padx=5, pady=5)
+
+        ctk.CTkLabel(frame_datos, text="Origen:").grid(row=2, column=0, sticky="e", padx=5, pady=5)
+        self.entry_origen = ctk.CTkEntry(frame_datos, width=300)
+        self.entry_origen.grid(row=2, column=1, columnspan=2, sticky="w", padx=5, pady=5)
+
+        ctk.CTkLabel(frame_datos, text="Responsable:").grid(row=3, column=0, sticky="e", padx=5, pady=5)
+        self.entry_responsable_entrada = ctk.CTkEntry(frame_datos, width=300)
+        self.entry_responsable_entrada.grid(row=3, column=1, columnspan=2, sticky="w", padx=5, pady=5)
+
+        ctk.CTkLabel(frame_datos, text="Observaciones:").grid(row=4, column=0, sticky="ne", padx=5, pady=5)
+        self.text_obs_entrada = ctk.CTkTextbox(frame_datos, width=400, height=60)
+        self.text_obs_entrada.grid(row=4, column=1, columnspan=3, sticky="w", padx=5, pady=5)
+
+        ctk.CTkButton(frame_datos, text="Registrar Entrada", command=self.registrar_entrada,
+                     width=200, height=40).grid(row=5, column=0, columnspan=4, pady=15)
+
+        # Variable para almacenar el material seleccionado
+        self.material_seleccionado_entrada = None
         
         # Frame historial
         frame_historial = ctk.CTkFrame(self.tab_entrada)
         frame_historial.pack(fill="both", expand=True, padx=20, pady=(0, 20))
-        
-        ctk.CTkLabel(frame_historial, text="Últimas Entradas", 
+
+        ctk.CTkLabel(frame_historial, text="Últimas Entradas",
                     font=("Arial", 16, "bold")).pack(pady=10)
-        
+
+        # Frame de búsqueda para historial
+        frame_busqueda_entrada = ctk.CTkFrame(frame_historial)
+        frame_busqueda_entrada.pack(fill="x", padx=10, pady=5)
+
+        ctk.CTkLabel(frame_busqueda_entrada, text="Buscar:").pack(side="left", padx=5)
+        entry_busqueda_entrada = ctk.CTkEntry(frame_busqueda_entrada,
+                                             textvariable=self.busqueda_entrada_var,
+                                             width=300)
+        entry_busqueda_entrada.pack(side="left", padx=5)
+        entry_busqueda_entrada.bind('<KeyRelease>', lambda e: self.cargar_historial_entradas())
+
+        ctk.CTkButton(frame_busqueda_entrada, text="Actualizar",
+                     command=self.cargar_historial_entradas).pack(side="left", padx=5)
+
         # Treeview historial
         columns_hist = ("Fecha", "Material", "Cantidad", "Origen", "Responsable")
-        self.tree_entradas = ttk.Treeview(frame_historial, columns=columns_hist, 
+        self.tree_entradas = ttk.Treeview(frame_historial, columns=columns_hist,
                                          show="headings", height=10)
-        
+
         for col in columns_hist:
             self.tree_entradas.heading(col, text=col)
             self.tree_entradas.column(col, width=200)
@@ -418,108 +489,199 @@ class InventarioPTAR:
         
     def crear_tab_salida(self):
         """Crea la pestaña de salida de material"""
-        
-        frame = ctk.CTkFrame(self.tab_salida)
-        frame.pack(fill="both", expand=True, padx=20, pady=20)
-        
+
         # Título
-        ctk.CTkLabel(frame, text="SALIDA DE MATERIAL", 
-                    font=("Arial", 20, "bold")).grid(row=0, column=0, columnspan=4, pady=20)
-        
-        # Campos
-        ctk.CTkLabel(frame, text="Material:").grid(row=1, column=0, sticky="e", padx=5, pady=10)
-        self.combo_material_salida = AutocompleteEntry(frame, width=400, 
-                                                       on_select_callback=self.actualizar_cantidad_desde_seleccion)
-        self.combo_material_salida.grid(row=1, column=1, columnspan=3, sticky="w", padx=5, pady=10)
-        
-        ctk.CTkLabel(frame, text="Cantidad Disponible:").grid(row=2, column=0, sticky="e", padx=5, pady=10)
-        
-        # Frame para cantidad y botón actualizar
-        frame_cantidad = ctk.CTkFrame(frame, fg_color="transparent")
-        frame_cantidad.grid(row=2, column=1, sticky="w", padx=5, pady=10)
-        
-        self.label_cantidad_disponible = ctk.CTkLabel(frame_cantidad, text="0.00", 
-                                                      font=("Arial", 14, "bold"),
-                                                      text_color="#1f4788")
-        self.label_cantidad_disponible.pack(side="left", padx=(0, 10))
-        
-        ctk.CTkButton(frame_cantidad, text="🔄 Actualizar", 
-                     command=self.actualizar_cantidad_desde_seleccion,
-                     width=100, height=28).pack(side="left")
-        
-        ctk.CTkLabel(frame, text="Cantidad a Retirar:").grid(row=3, column=0, sticky="e", padx=5, pady=10)
-        self.entry_cantidad_salida = ctk.CTkEntry(frame, width=150)
-        self.entry_cantidad_salida.grid(row=3, column=1, sticky="w", padx=5, pady=10)
-        
-        ctk.CTkLabel(frame, text="Destino:").grid(row=4, column=0, sticky="e", padx=5, pady=10)
-        destinos = ["PTAR2 - Almacén", "PTAR2 - Taller", "PTAR2 - Bombeo", 
+        ctk.CTkLabel(self.tab_salida, text="SALIDA DE MATERIAL",
+                    font=("Arial", 20, "bold")).pack(pady=10)
+
+        # Frame de búsqueda de materiales
+        frame_busqueda_mat = ctk.CTkFrame(self.tab_salida)
+        frame_busqueda_mat.pack(fill="x", padx=20, pady=10)
+
+        ctk.CTkLabel(frame_busqueda_mat, text="Buscar Material:").pack(side="left", padx=5)
+        self.entry_buscar_mat_salida = ctk.CTkEntry(frame_busqueda_mat, width=300)
+        self.entry_buscar_mat_salida.pack(side="left", padx=5)
+        self.entry_buscar_mat_salida.bind('<KeyRelease>', lambda e: self.filtrar_materiales_salida())
+
+        ctk.CTkLabel(frame_busqueda_mat, text="Categoría:").pack(side="left", padx=5)
+        categorias = ["Todas", "Fontanería y Ferretería", "Herramientas y Equipos",
+                     "Seguridad", "Limpieza", "Papelería"]
+        self.combo_cat_salida = ctk.CTkComboBox(frame_busqueda_mat, values=categorias,
+                                                width=180,
+                                                command=lambda e: self.filtrar_materiales_salida())
+        self.combo_cat_salida.pack(side="left", padx=5)
+        self.combo_cat_salida.set("Todas")
+
+        # Frame para lista de materiales
+        frame_lista_mat = ctk.CTkFrame(self.tab_salida)
+        frame_lista_mat.pack(fill="both", expand=True, padx=20, pady=5)
+
+        # Treeview de materiales
+        columns_mat = ("ID", "Código", "Nombre", "Categoría", "Stock Actual", "Unidad")
+        self.tree_mat_salida = ttk.Treeview(frame_lista_mat, columns=columns_mat,
+                                           show="headings", height=8)
+
+        for col in columns_mat:
+            self.tree_mat_salida.heading(col, text=col)
+
+        self.tree_mat_salida.column("ID", width=50)
+        self.tree_mat_salida.column("Código", width=100)
+        self.tree_mat_salida.column("Nombre", width=250)
+        self.tree_mat_salida.column("Categoría", width=150)
+        self.tree_mat_salida.column("Stock Actual", width=100)
+        self.tree_mat_salida.column("Unidad", width=80)
+
+        self.tree_mat_salida.pack(fill="both", expand=True, padx=5, pady=5)
+        self.tree_mat_salida.bind('<<TreeviewSelect>>', self.seleccionar_material_salida)
+
+        # Frame de datos de salida
+        frame_datos = ctk.CTkFrame(self.tab_salida)
+        frame_datos.pack(fill="x", padx=20, pady=10)
+
+        ctk.CTkLabel(frame_datos, text="Material Seleccionado:", font=("Arial", 12, "bold")).grid(row=0, column=0, sticky="e", padx=5, pady=5)
+        self.label_material_sel_salida = ctk.CTkLabel(frame_datos, text="Ninguno", font=("Arial", 12))
+        self.label_material_sel_salida.grid(row=0, column=1, sticky="w", padx=5, pady=5)
+
+        ctk.CTkLabel(frame_datos, text="Stock Disponible:", font=("Arial", 10)).grid(row=0, column=2, sticky="e", padx=5, pady=5)
+        self.label_stock_salida = ctk.CTkLabel(frame_datos, text="0", font=("Arial", 10, "bold"), text_color="#1f4788")
+        self.label_stock_salida.grid(row=0, column=3, sticky="w", padx=5, pady=5)
+
+        ctk.CTkLabel(frame_datos, text="Cantidad a Retirar:").grid(row=1, column=0, sticky="e", padx=5, pady=5)
+        self.entry_cantidad_salida = ctk.CTkEntry(frame_datos, width=150)
+        self.entry_cantidad_salida.grid(row=1, column=1, sticky="w", padx=5, pady=5)
+
+        ctk.CTkLabel(frame_datos, text="Destino:").grid(row=2, column=0, sticky="e", padx=5, pady=5)
+        destinos = ["PTAR2 - Almacén", "PTAR2 - Taller", "PTAR2 - Bombeo",
                    "PTAR2 - Laboratorio", "PTAR2 - Oficinas", "PTAR2 - Mantenimiento", "Otro"]
-        self.combo_destino = ctk.CTkComboBox(frame, values=destinos, width=300)
-        self.combo_destino.grid(row=4, column=1, columnspan=2, sticky="w", padx=5, pady=10)
-        
-        ctk.CTkLabel(frame, text="Responsable:").grid(row=5, column=0, sticky="e", padx=5, pady=10)
-        self.entry_responsable_salida = ctk.CTkEntry(frame, width=300)
-        self.entry_responsable_salida.grid(row=5, column=1, columnspan=2, sticky="w", padx=5, pady=10)
-        
-        ctk.CTkLabel(frame, text="Observaciones:").grid(row=6, column=0, sticky="ne", padx=5, pady=10)
-        self.text_obs_salida = ctk.CTkTextbox(frame, width=400, height=100)
-        self.text_obs_salida.grid(row=6, column=1, columnspan=3, sticky="w", padx=5, pady=10)
-        
-        # Botón
-        ctk.CTkButton(frame, text="Registrar Salida", command=self.registrar_salida,
-                     width=200, height=40).grid(row=7, column=0, columnspan=4, pady=30)
+        self.combo_destino = ctk.CTkComboBox(frame_datos, values=destinos, width=300)
+        self.combo_destino.grid(row=2, column=1, columnspan=2, sticky="w", padx=5, pady=5)
+
+        ctk.CTkLabel(frame_datos, text="Responsable:").grid(row=3, column=0, sticky="e", padx=5, pady=5)
+        self.entry_responsable_salida = ctk.CTkEntry(frame_datos, width=300)
+        self.entry_responsable_salida.grid(row=3, column=1, columnspan=2, sticky="w", padx=5, pady=5)
+
+        ctk.CTkLabel(frame_datos, text="Observaciones:").grid(row=4, column=0, sticky="ne", padx=5, pady=5)
+        self.text_obs_salida = ctk.CTkTextbox(frame_datos, width=400, height=60)
+        self.text_obs_salida.grid(row=4, column=1, columnspan=3, sticky="w", padx=5, pady=5)
+
+        ctk.CTkButton(frame_datos, text="Registrar Salida", command=self.registrar_salida,
+                     width=200, height=40).grid(row=5, column=0, columnspan=4, pady=15)
+
+        # Variable para almacenar el material seleccionado
+        self.material_seleccionado_salida = None
         
         # Frame historial
         frame_historial = ctk.CTkFrame(self.tab_salida)
         frame_historial.pack(fill="both", expand=True, padx=20, pady=(0, 20))
-        
-        ctk.CTkLabel(frame_historial, text="Últimas Salidas", 
+
+        ctk.CTkLabel(frame_historial, text="Últimas Salidas",
                     font=("Arial", 16, "bold")).pack(pady=10)
-        
+
+        # Frame de búsqueda para historial
+        frame_busqueda_salida = ctk.CTkFrame(frame_historial)
+        frame_busqueda_salida.pack(fill="x", padx=10, pady=5)
+
+        ctk.CTkLabel(frame_busqueda_salida, text="Buscar:").pack(side="left", padx=5)
+        entry_busqueda_salida = ctk.CTkEntry(frame_busqueda_salida,
+                                             textvariable=self.busqueda_salida_var,
+                                             width=300)
+        entry_busqueda_salida.pack(side="left", padx=5)
+        entry_busqueda_salida.bind('<KeyRelease>', lambda e: self.cargar_historial_salidas())
+
+        ctk.CTkButton(frame_busqueda_salida, text="Actualizar",
+                     command=self.cargar_historial_salidas).pack(side="left", padx=5)
+
         # Treeview historial
         columns_hist = ("Fecha", "Material", "Cantidad", "Destino", "Responsable")
-        self.tree_salidas = ttk.Treeview(frame_historial, columns=columns_hist, 
+        self.tree_salidas = ttk.Treeview(frame_historial, columns=columns_hist,
                                         show="headings", height=10)
-        
+
         for col in columns_hist:
             self.tree_salidas.heading(col, text=col)
             self.tree_salidas.column(col, width=200)
-        
+
         self.tree_salidas.pack(fill="both", expand=True, padx=10, pady=10)
         
     def crear_tab_prestamos(self):
         """Crea la pestaña de préstamos"""
-        
-        # Frame superior para registrar préstamo
-        frame_registro = ctk.CTkFrame(self.tab_prestamos)
-        frame_registro.pack(fill="x", padx=20, pady=20)
-        
-        ctk.CTkLabel(frame_registro, text="REGISTRO DE PRÉSTAMOS", 
-                    font=("Arial", 18, "bold")).grid(row=0, column=0, columnspan=4, pady=10)
-        
-        # Campos
-        ctk.CTkLabel(frame_registro, text="Material:").grid(row=1, column=0, sticky="e", padx=5, pady=5)
-        self.combo_material_prestamo = AutocompleteEntry(frame_registro, width=300)
-        self.combo_material_prestamo.grid(row=1, column=1, columnspan=2, sticky="w", padx=5, pady=5)
-        
-        ctk.CTkLabel(frame_registro, text="Cantidad:").grid(row=2, column=0, sticky="e", padx=5, pady=5)
-        self.entry_cantidad_prestamo = ctk.CTkEntry(frame_registro, width=150)
-        self.entry_cantidad_prestamo.grid(row=2, column=1, sticky="w", padx=5, pady=5)
-        
-        ctk.CTkLabel(frame_registro, text="Prestado a:").grid(row=3, column=0, sticky="e", padx=5, pady=5)
-        self.entry_prestado_a = ctk.CTkEntry(frame_registro, width=300)
-        self.entry_prestado_a.grid(row=3, column=1, columnspan=2, sticky="w", padx=5, pady=5)
-        
-        ctk.CTkLabel(frame_registro, text="Área/Destino:").grid(row=4, column=0, sticky="e", padx=5, pady=5)
-        self.entry_area_prestamo = ctk.CTkEntry(frame_registro, width=300)
-        self.entry_area_prestamo.grid(row=4, column=1, columnspan=2, sticky="w", padx=5, pady=5)
-        
-        ctk.CTkLabel(frame_registro, text="Observaciones:").grid(row=5, column=0, sticky="ne", padx=5, pady=5)
-        self.text_obs_prestamo = ctk.CTkTextbox(frame_registro, width=300, height=60)
-        self.text_obs_prestamo.grid(row=5, column=1, columnspan=2, sticky="w", padx=5, pady=5)
-        
-        ctk.CTkButton(frame_registro, text="Registrar Préstamo", 
-                     command=self.registrar_prestamo).grid(row=6, column=0, columnspan=3, pady=15)
+
+        # Título
+        ctk.CTkLabel(self.tab_prestamos, text="REGISTRO DE PRÉSTAMOS",
+                    font=("Arial", 20, "bold")).pack(pady=10)
+
+        # Frame de búsqueda de materiales
+        frame_busqueda_mat = ctk.CTkFrame(self.tab_prestamos)
+        frame_busqueda_mat.pack(fill="x", padx=20, pady=10)
+
+        ctk.CTkLabel(frame_busqueda_mat, text="Buscar Material:").pack(side="left", padx=5)
+        self.entry_buscar_mat_prestamo = ctk.CTkEntry(frame_busqueda_mat, width=300)
+        self.entry_buscar_mat_prestamo.pack(side="left", padx=5)
+        self.entry_buscar_mat_prestamo.bind('<KeyRelease>', lambda e: self.filtrar_materiales_prestamo())
+
+        ctk.CTkLabel(frame_busqueda_mat, text="Categoría:").pack(side="left", padx=5)
+        categorias = ["Todas", "Fontanería y Ferretería", "Herramientas y Equipos",
+                     "Seguridad", "Limpieza", "Papelería"]
+        self.combo_cat_prestamo = ctk.CTkComboBox(frame_busqueda_mat, values=categorias,
+                                                 width=180,
+                                                 command=lambda e: self.filtrar_materiales_prestamo())
+        self.combo_cat_prestamo.pack(side="left", padx=5)
+        self.combo_cat_prestamo.set("Todas")
+
+        # Frame para lista de materiales
+        frame_lista_mat = ctk.CTkFrame(self.tab_prestamos)
+        frame_lista_mat.pack(fill="both", expand=True, padx=20, pady=5)
+
+        # Treeview de materiales
+        columns_mat = ("ID", "Código", "Nombre", "Categoría", "Stock Actual", "Unidad")
+        self.tree_mat_prestamo = ttk.Treeview(frame_lista_mat, columns=columns_mat,
+                                             show="headings", height=6)
+
+        for col in columns_mat:
+            self.tree_mat_prestamo.heading(col, text=col)
+
+        self.tree_mat_prestamo.column("ID", width=50)
+        self.tree_mat_prestamo.column("Código", width=100)
+        self.tree_mat_prestamo.column("Nombre", width=250)
+        self.tree_mat_prestamo.column("Categoría", width=150)
+        self.tree_mat_prestamo.column("Stock Actual", width=100)
+        self.tree_mat_prestamo.column("Unidad", width=80)
+
+        self.tree_mat_prestamo.pack(fill="both", expand=True, padx=5, pady=5)
+        self.tree_mat_prestamo.bind('<<TreeviewSelect>>', self.seleccionar_material_prestamo)
+
+        # Frame de datos de préstamo
+        frame_datos = ctk.CTkFrame(self.tab_prestamos)
+        frame_datos.pack(fill="x", padx=20, pady=10)
+
+        ctk.CTkLabel(frame_datos, text="Material Seleccionado:", font=("Arial", 12, "bold")).grid(row=0, column=0, sticky="e", padx=5, pady=5)
+        self.label_material_sel_prestamo = ctk.CTkLabel(frame_datos, text="Ninguno", font=("Arial", 12))
+        self.label_material_sel_prestamo.grid(row=0, column=1, sticky="w", padx=5, pady=5)
+
+        ctk.CTkLabel(frame_datos, text="Stock Disponible:", font=("Arial", 10)).grid(row=0, column=2, sticky="e", padx=5, pady=5)
+        self.label_stock_prestamo = ctk.CTkLabel(frame_datos, text="0", font=("Arial", 10, "bold"))
+        self.label_stock_prestamo.grid(row=0, column=3, sticky="w", padx=5, pady=5)
+
+        ctk.CTkLabel(frame_datos, text="Cantidad:").grid(row=1, column=0, sticky="e", padx=5, pady=5)
+        self.entry_cantidad_prestamo = ctk.CTkEntry(frame_datos, width=150)
+        self.entry_cantidad_prestamo.grid(row=1, column=1, sticky="w", padx=5, pady=5)
+
+        ctk.CTkLabel(frame_datos, text="Prestado a:").grid(row=2, column=0, sticky="e", padx=5, pady=5)
+        self.entry_prestado_a = ctk.CTkEntry(frame_datos, width=300)
+        self.entry_prestado_a.grid(row=2, column=1, columnspan=2, sticky="w", padx=5, pady=5)
+
+        ctk.CTkLabel(frame_datos, text="Área/Destino:").grid(row=3, column=0, sticky="e", padx=5, pady=5)
+        self.entry_area_prestamo = ctk.CTkEntry(frame_datos, width=300)
+        self.entry_area_prestamo.grid(row=3, column=1, columnspan=2, sticky="w", padx=5, pady=5)
+
+        ctk.CTkLabel(frame_datos, text="Observaciones:").grid(row=4, column=0, sticky="ne", padx=5, pady=5)
+        self.text_obs_prestamo = ctk.CTkTextbox(frame_datos, width=400, height=50)
+        self.text_obs_prestamo.grid(row=4, column=1, columnspan=3, sticky="w", padx=5, pady=5)
+
+        ctk.CTkButton(frame_datos, text="Registrar Préstamo", command=self.registrar_prestamo,
+                     width=200, height=40).grid(row=5, column=0, columnspan=4, pady=10)
+
+        # Variable para almacenar el material seleccionado
+        self.material_seleccionado_prestamo = None
         
         # Frame para lista de préstamos
         frame_lista = ctk.CTkFrame(self.tab_prestamos)
@@ -528,13 +690,32 @@ class InventarioPTAR:
         ctk.CTkLabel(frame_lista, text="PRÉSTAMOS ACTIVOS", 
                     font=("Arial", 16, "bold")).pack(pady=10)
         
+        # Frame de búsqueda y filtros
+        frame_busqueda_prestamo = ctk.CTkFrame(frame_lista)
+        frame_busqueda_prestamo.pack(fill="x", padx=10, pady=5)
+
+        ctk.CTkLabel(frame_busqueda_prestamo, text="Buscar:").pack(side="left", padx=5)
+        entry_busqueda_prestamo = ctk.CTkEntry(frame_busqueda_prestamo,
+                                               textvariable=self.busqueda_prestamo_var,
+                                               width=250)
+        entry_busqueda_prestamo.pack(side="left", padx=5)
+        entry_busqueda_prestamo.bind('<KeyRelease>', lambda e: self.cargar_prestamos())
+
+        ctk.CTkLabel(frame_busqueda_prestamo, text="Estado:").pack(side="left", padx=5)
+        estados = ["Todos", "Activo", "Devuelto"]
+        combo_estado_prestamo = ctk.CTkComboBox(frame_busqueda_prestamo, values=estados,
+                                                variable=self.filtro_estado_prestamo,
+                                                command=lambda e: self.cargar_prestamos(),
+                                                width=120)
+        combo_estado_prestamo.pack(side="left", padx=5)
+
         # Botones
         frame_botones = ctk.CTkFrame(frame_lista)
         frame_botones.pack(fill="x", padx=10, pady=5)
-        
-        ctk.CTkButton(frame_botones, text="Registrar Devolución", 
+
+        ctk.CTkButton(frame_botones, text="Registrar Devolución",
                      command=self.registrar_devolucion).pack(side="left", padx=5)
-        ctk.CTkButton(frame_botones, text="Actualizar", 
+        ctk.CTkButton(frame_botones, text="Actualizar",
                      command=self.cargar_prestamos).pack(side="left", padx=5)
         
         # Treeview
@@ -554,52 +735,110 @@ class InventarioPTAR:
         
     def crear_tab_en_uso(self):
         """Crea la pestaña de material en uso"""
-        
-        # Frame superior para registrar
-        frame_registro = ctk.CTkFrame(self.tab_en_uso)
-        frame_registro.pack(fill="x", padx=20, pady=20)
-        
-        ctk.CTkLabel(frame_registro, text="REGISTRAR MATERIAL EN USO", 
-                    font=("Arial", 18, "bold")).grid(row=0, column=0, columnspan=4, pady=10)
-        
-        # Campos
-        ctk.CTkLabel(frame_registro, text="Material:").grid(row=1, column=0, sticky="e", padx=5, pady=5)
-        self.combo_material_uso = AutocompleteEntry(frame_registro, width=300)
-        self.combo_material_uso.grid(row=1, column=1, columnspan=2, sticky="w", padx=5, pady=5)
-        
-        ctk.CTkLabel(frame_registro, text="Cantidad:").grid(row=2, column=0, sticky="e", padx=5, pady=5)
-        self.entry_cantidad_uso = ctk.CTkEntry(frame_registro, width=150)
-        self.entry_cantidad_uso.grid(row=2, column=1, sticky="w", padx=5, pady=5)
-        
-        ctk.CTkLabel(frame_registro, text="Equipo/Instalación:").grid(row=3, column=0, sticky="e", padx=5, pady=5)
-        self.entry_equipo_uso = ctk.CTkEntry(frame_registro, width=300)
-        self.entry_equipo_uso.grid(row=3, column=1, columnspan=2, sticky="w", padx=5, pady=5)
-        
-        ctk.CTkLabel(frame_registro, text="Responsable:").grid(row=4, column=0, sticky="e", padx=5, pady=5)
-        self.entry_responsable_uso = ctk.CTkEntry(frame_registro, width=300)
-        self.entry_responsable_uso.grid(row=4, column=1, columnspan=2, sticky="w", padx=5, pady=5)
-        
-        ctk.CTkLabel(frame_registro, text="Observaciones:").grid(row=5, column=0, sticky="ne", padx=5, pady=5)
-        self.text_obs_uso = ctk.CTkTextbox(frame_registro, width=300, height=60)
-        self.text_obs_uso.grid(row=5, column=1, columnspan=2, sticky="w", padx=5, pady=5)
-        
-        ctk.CTkButton(frame_registro, text="Registrar Material en Uso", 
-                     command=self.registrar_material_uso).grid(row=6, column=0, columnspan=3, pady=15)
+
+        # Título
+        ctk.CTkLabel(self.tab_en_uso, text="REGISTRAR MATERIAL EN USO",
+                    font=("Arial", 20, "bold")).pack(pady=10)
+
+        # Frame de búsqueda de materiales
+        frame_busqueda_mat = ctk.CTkFrame(self.tab_en_uso)
+        frame_busqueda_mat.pack(fill="x", padx=20, pady=10)
+
+        ctk.CTkLabel(frame_busqueda_mat, text="Buscar Material:").pack(side="left", padx=5)
+        self.entry_buscar_mat_uso = ctk.CTkEntry(frame_busqueda_mat, width=300)
+        self.entry_buscar_mat_uso.pack(side="left", padx=5)
+        self.entry_buscar_mat_uso.bind('<KeyRelease>', lambda e: self.filtrar_materiales_uso())
+
+        ctk.CTkLabel(frame_busqueda_mat, text="Categoría:").pack(side="left", padx=5)
+        categorias = ["Todas", "Fontanería y Ferretería", "Herramientas y Equipos",
+                     "Seguridad", "Limpieza", "Papelería"]
+        self.combo_cat_uso = ctk.CTkComboBox(frame_busqueda_mat, values=categorias,
+                                            width=180,
+                                            command=lambda e: self.filtrar_materiales_uso())
+        self.combo_cat_uso.pack(side="left", padx=5)
+        self.combo_cat_uso.set("Todas")
+
+        # Frame para lista de materiales
+        frame_lista_mat = ctk.CTkFrame(self.tab_en_uso)
+        frame_lista_mat.pack(fill="both", expand=True, padx=20, pady=5)
+
+        # Treeview de materiales
+        columns_mat = ("ID", "Código", "Nombre", "Categoría", "Stock Actual", "Unidad")
+        self.tree_mat_uso = ttk.Treeview(frame_lista_mat, columns=columns_mat,
+                                        show="headings", height=6)
+
+        for col in columns_mat:
+            self.tree_mat_uso.heading(col, text=col)
+
+        self.tree_mat_uso.column("ID", width=50)
+        self.tree_mat_uso.column("Código", width=100)
+        self.tree_mat_uso.column("Nombre", width=250)
+        self.tree_mat_uso.column("Categoría", width=150)
+        self.tree_mat_uso.column("Stock Actual", width=100)
+        self.tree_mat_uso.column("Unidad", width=80)
+
+        self.tree_mat_uso.pack(fill="both", expand=True, padx=5, pady=5)
+        self.tree_mat_uso.bind('<<TreeviewSelect>>', self.seleccionar_material_uso)
+
+        # Frame de datos
+        frame_datos = ctk.CTkFrame(self.tab_en_uso)
+        frame_datos.pack(fill="x", padx=20, pady=10)
+
+        ctk.CTkLabel(frame_datos, text="Material Seleccionado:", font=("Arial", 12, "bold")).grid(row=0, column=0, sticky="e", padx=5, pady=5)
+        self.label_material_sel_uso = ctk.CTkLabel(frame_datos, text="Ninguno", font=("Arial", 12))
+        self.label_material_sel_uso.grid(row=0, column=1, sticky="w", padx=5, pady=5)
+
+        ctk.CTkLabel(frame_datos, text="Stock Disponible:", font=("Arial", 10)).grid(row=0, column=2, sticky="e", padx=5, pady=5)
+        self.label_stock_uso = ctk.CTkLabel(frame_datos, text="0", font=("Arial", 10, "bold"))
+        self.label_stock_uso.grid(row=0, column=3, sticky="w", padx=5, pady=5)
+
+        ctk.CTkLabel(frame_datos, text="Cantidad:").grid(row=1, column=0, sticky="e", padx=5, pady=5)
+        self.entry_cantidad_uso = ctk.CTkEntry(frame_datos, width=150)
+        self.entry_cantidad_uso.grid(row=1, column=1, sticky="w", padx=5, pady=5)
+
+        ctk.CTkLabel(frame_datos, text="Equipo/Instalación:").grid(row=2, column=0, sticky="e", padx=5, pady=5)
+        self.entry_equipo_uso = ctk.CTkEntry(frame_datos, width=300)
+        self.entry_equipo_uso.grid(row=2, column=1, columnspan=2, sticky="w", padx=5, pady=5)
+
+        ctk.CTkLabel(frame_datos, text="Responsable:").grid(row=3, column=0, sticky="e", padx=5, pady=5)
+        self.entry_responsable_uso = ctk.CTkEntry(frame_datos, width=300)
+        self.entry_responsable_uso.grid(row=3, column=1, columnspan=2, sticky="w", padx=5, pady=5)
+
+        ctk.CTkLabel(frame_datos, text="Observaciones:").grid(row=4, column=0, sticky="ne", padx=5, pady=5)
+        self.text_obs_uso = ctk.CTkTextbox(frame_datos, width=400, height=50)
+        self.text_obs_uso.grid(row=4, column=1, columnspan=3, sticky="w", padx=5, pady=5)
+
+        ctk.CTkButton(frame_datos, text="Registrar Material en Uso", command=self.registrar_material_uso,
+                     width=200, height=40).grid(row=5, column=0, columnspan=4, pady=10)
+
+        # Variable para almacenar el material seleccionado
+        self.material_seleccionado_uso = None
         
         # Frame para lista
         frame_lista = ctk.CTkFrame(self.tab_en_uso)
         frame_lista.pack(fill="both", expand=True, padx=20, pady=(0, 20))
         
-        ctk.CTkLabel(frame_lista, text="MATERIAL ACTUALMENTE EN USO", 
+        ctk.CTkLabel(frame_lista, text="MATERIAL ACTUALMENTE EN USO",
                     font=("Arial", 16, "bold")).pack(pady=10)
-        
+
+        # Frame de búsqueda
+        frame_busqueda_uso = ctk.CTkFrame(frame_lista)
+        frame_busqueda_uso.pack(fill="x", padx=10, pady=5)
+
+        ctk.CTkLabel(frame_busqueda_uso, text="Buscar:").pack(side="left", padx=5)
+        entry_busqueda_uso = ctk.CTkEntry(frame_busqueda_uso,
+                                          textvariable=self.busqueda_uso_var,
+                                          width=300)
+        entry_busqueda_uso.pack(side="left", padx=5)
+        entry_busqueda_uso.bind('<KeyRelease>', lambda e: self.cargar_material_en_uso())
+
         # Botones
         frame_botones = ctk.CTkFrame(frame_lista)
         frame_botones.pack(fill="x", padx=10, pady=5)
-        
-        ctk.CTkButton(frame_botones, text="Dar de Baja", 
+
+        ctk.CTkButton(frame_botones, text="Dar de Baja",
                      command=self.dar_baja_material_uso).pack(side="left", padx=5)
-        ctk.CTkButton(frame_botones, text="Actualizar", 
+        ctk.CTkButton(frame_botones, text="Actualizar",
                      command=self.cargar_material_en_uso).pack(side="left", padx=5)
         
         # Treeview
@@ -1348,35 +1587,67 @@ class InventarioPTAR:
                 self.cargar_datos()
             except Exception as e:
                 messagebox.showerror("Error", f"Error al eliminar: {str(e)}")
-        
+
+    def filtrar_materiales_entrada(self):
+        """Filtra los materiales en el tab de entrada"""
+        for item in self.tree_mat_entrada.get_children():
+            self.tree_mat_entrada.delete(item)
+
+        busqueda = self.entry_buscar_mat_entrada.get().lower()
+        categoria = self.combo_cat_entrada.get()
+
+        query = "SELECT id, codigo, nombre, categoria, cantidad_actual, unidad FROM materiales WHERE 1=1"
+        params = []
+
+        if busqueda:
+            query += " AND (LOWER(nombre) LIKE ? OR LOWER(codigo) LIKE ?)"
+            params.extend([f"%{busqueda}%", f"%{busqueda}%"])
+
+        if categoria != "Todas":
+            query += " AND categoria = ?"
+            params.append(categoria)
+
+        query += " ORDER BY nombre"
+
+        self.cursor.execute(query, params)
+        for row in self.cursor.fetchall():
+            self.tree_mat_entrada.insert("", "end", values=row)
+
+    def seleccionar_material_entrada(self, event):
+        """Maneja la selección de un material en entrada"""
+        seleccion = self.tree_mat_entrada.selection()
+        if seleccion:
+            item = self.tree_mat_entrada.item(seleccion[0])
+            valores = item['values']
+            self.material_seleccionado_entrada = {
+                'id': valores[0],
+                'codigo': valores[1],
+                'nombre': valores[2],
+                'stock': valores[4],
+                'unidad': valores[5]
+            }
+            self.label_material_sel_entrada.configure(text=valores[2])
+            self.label_stock_entrada.configure(text=f"{valores[4]} {valores[5]}")
+
     def registrar_entrada(self):
         """Registra una entrada de material"""
-        
+
         try:
-            material_nombre = self.combo_material_entrada.get()
-            if not material_nombre:
-                messagebox.showwarning("Advertencia", "Selecciona un material")
+            if not self.material_seleccionado_entrada:
+                messagebox.showwarning("Advertencia", "Selecciona un material de la lista")
                 return
             
             cantidad = float(self.entry_cantidad_entrada.get())
             if cantidad <= 0:
                 messagebox.showwarning("Advertencia", "La cantidad debe ser mayor a 0")
                 return
-            
+
             origen = self.entry_origen.get()
             responsable = self.entry_responsable_entrada.get()
             observaciones = self.text_obs_entrada.get("1.0", "end-1c")
-            
-            # Obtener ID del material
-            self.cursor.execute("SELECT id, cantidad_actual FROM materiales WHERE nombre = ?", 
-                              (material_nombre,))
-            material = self.cursor.fetchone()
-            
-            if not material:
-                messagebox.showerror("Error", "Material no encontrado")
-                return
-            
-            material_id, cantidad_actual = material
+
+            material_id = self.material_seleccionado_entrada['id']
+            cantidad_actual = self.material_seleccionado_entrada['stock']
             nueva_cantidad = cantidad_actual + cantidad
             
             # Actualizar cantidad
@@ -1395,49 +1666,86 @@ class InventarioPTAR:
             
             messagebox.showinfo("Éxito", f"Entrada registrada correctamente\n"
                               f"Nueva cantidad: {nueva_cantidad:.2f}")
-            
+
             # Limpiar campos
             self.entry_cantidad_entrada.delete(0, 'end')
             self.entry_origen.delete(0, 'end')
             self.entry_responsable_entrada.delete(0, 'end')
             self.text_obs_entrada.delete("1.0", "end")
-            
+            self.label_material_sel_entrada.configure(text="Ninguno")
+            self.label_stock_entrada.configure(text="0")
+            self.material_seleccionado_entrada = None
+
             self.cargar_datos()
+            self.filtrar_materiales_entrada()
+            self.cargar_historial_entradas()
             
         except ValueError:
             messagebox.showerror("Error", "La cantidad debe ser un número válido")
         except Exception as e:
             messagebox.showerror("Error", f"Error al registrar entrada: {str(e)}")
         
+    def filtrar_materiales_salida(self):
+        """Filtra los materiales en el tab de salida"""
+        for item in self.tree_mat_salida.get_children():
+            self.tree_mat_salida.delete(item)
+
+        busqueda = self.entry_buscar_mat_salida.get().lower()
+        categoria = self.combo_cat_salida.get()
+
+        query = "SELECT id, codigo, nombre, categoria, cantidad_actual, unidad FROM materiales WHERE 1=1"
+        params = []
+
+        if busqueda:
+            query += " AND (LOWER(nombre) LIKE ? OR LOWER(codigo) LIKE ?)"
+            params.extend([f"%{busqueda}%", f"%{busqueda}%"])
+
+        if categoria != "Todas":
+            query += " AND categoria = ?"
+            params.append(categoria)
+
+        query += " ORDER BY nombre"
+
+        self.cursor.execute(query, params)
+        for row in self.cursor.fetchall():
+            self.tree_mat_salida.insert("", "end", values=row)
+
+    def seleccionar_material_salida(self, event):
+        """Maneja la selección de un material en salida"""
+        seleccion = self.tree_mat_salida.selection()
+        if seleccion:
+            item = self.tree_mat_salida.item(seleccion[0])
+            valores = item['values']
+            self.material_seleccionado_salida = {
+                'id': valores[0],
+                'codigo': valores[1],
+                'nombre': valores[2],
+                'stock': valores[4],
+                'unidad': valores[5]
+            }
+            self.label_material_sel_salida.configure(text=valores[2])
+            self.label_stock_salida.configure(text=f"{valores[4]} {valores[5]}")
+
     def registrar_salida(self):
         """Registra una salida de material"""
-        
+
         try:
-            material_nombre = self.combo_material_salida.get()
-            if not material_nombre:
-                messagebox.showwarning("Advertencia", "Selecciona un material")
+            if not self.material_seleccionado_salida:
+                messagebox.showwarning("Advertencia", "Selecciona un material de la lista")
                 return
-            
+
             cantidad = float(self.entry_cantidad_salida.get())
             if cantidad <= 0:
                 messagebox.showwarning("Advertencia", "La cantidad debe ser mayor a 0")
                 return
-            
+
             destino = self.combo_destino.get()
             responsable = self.entry_responsable_salida.get()
             observaciones = self.text_obs_salida.get("1.0", "end-1c")
-            
-            # Obtener ID y cantidad del material
-            self.cursor.execute("SELECT id, cantidad_actual FROM materiales WHERE nombre = ?", 
-                              (material_nombre,))
-            material = self.cursor.fetchone()
-            
-            if not material:
-                messagebox.showerror("Error", "Material no encontrado")
-                return
-            
-            material_id, cantidad_actual = material
-            
+
+            material_id = self.material_seleccionado_salida['id']
+            cantidad_actual = self.material_seleccionado_salida['stock']
+
             if cantidad > cantidad_actual:
                 messagebox.showerror("Error", 
                                    f"No hay suficiente stock\n"
@@ -1463,14 +1771,18 @@ class InventarioPTAR:
             
             messagebox.showinfo("Éxito", f"Salida registrada correctamente\n"
                               f"Nueva cantidad: {nueva_cantidad:.2f}")
-            
+
             # Limpiar campos
             self.entry_cantidad_salida.delete(0, 'end')
             self.entry_responsable_salida.delete(0, 'end')
             self.text_obs_salida.delete("1.0", "end")
-            
+            self.label_material_sel_salida.configure(text="Ninguno")
+            self.label_stock_salida.configure(text="0")
+            self.material_seleccionado_salida = None
+
             self.cargar_datos()
-            self.actualizar_cantidad_disponible(None)
+            self.filtrar_materiales_salida()
+            self.cargar_historial_salidas()
             
         except ValueError:
             messagebox.showerror("Error", "La cantidad debe ser un número válido")
@@ -1549,39 +1861,71 @@ class InventarioPTAR:
         """Método legacy - redirige al nuevo método"""
         self.actualizar_cantidad_desde_seleccion()
         
+    def filtrar_materiales_prestamo(self):
+        """Filtra los materiales en el tab de préstamos"""
+        for item in self.tree_mat_prestamo.get_children():
+            self.tree_mat_prestamo.delete(item)
+
+        busqueda = self.entry_buscar_mat_prestamo.get().lower()
+        categoria = self.combo_cat_prestamo.get()
+
+        query = "SELECT id, codigo, nombre, categoria, cantidad_actual, unidad FROM materiales WHERE 1=1"
+        params = []
+
+        if busqueda:
+            query += " AND (LOWER(nombre) LIKE ? OR LOWER(codigo) LIKE ?)"
+            params.extend([f"%{busqueda}%", f"%{busqueda}%"])
+
+        if categoria != "Todas":
+            query += " AND categoria = ?"
+            params.append(categoria)
+
+        query += " ORDER BY nombre"
+
+        self.cursor.execute(query, params)
+        for row in self.cursor.fetchall():
+            self.tree_mat_prestamo.insert("", "end", values=row)
+
+    def seleccionar_material_prestamo(self, event):
+        """Maneja la selección de un material en préstamos"""
+        seleccion = self.tree_mat_prestamo.selection()
+        if seleccion:
+            item = self.tree_mat_prestamo.item(seleccion[0])
+            valores = item['values']
+            self.material_seleccionado_prestamo = {
+                'id': valores[0],
+                'codigo': valores[1],
+                'nombre': valores[2],
+                'stock': valores[4],
+                'unidad': valores[5]
+            }
+            self.label_material_sel_prestamo.configure(text=valores[2])
+            self.label_stock_prestamo.configure(text=f"{valores[4]} {valores[5]}")
+
     def registrar_prestamo(self):
         """Registra un préstamo de material"""
-        
+
         try:
-            material_nombre = self.combo_material_prestamo.get()
-            if not material_nombre:
-                messagebox.showwarning("Advertencia", "Selecciona un material")
+            if not self.material_seleccionado_prestamo:
+                messagebox.showwarning("Advertencia", "Selecciona un material de la lista")
                 return
-            
+
             cantidad = float(self.entry_cantidad_prestamo.get())
             prestado_a = self.entry_prestado_a.get()
             area = self.entry_area_prestamo.get()
             observaciones = self.text_obs_prestamo.get("1.0", "end-1c")
-            
+
             if not prestado_a:
                 messagebox.showwarning("Advertencia", "Indica a quién se presta el material")
                 return
-            
-            # Verificar stock
-            self.cursor.execute("SELECT id, cantidad_actual FROM materiales WHERE nombre = ?", 
-                              (material_nombre,))
-            material = self.cursor.fetchone()
-            
-            if not material:
-                messagebox.showerror("Error", "Material no encontrado")
-                return
-            
-            material_id, cantidad_actual = material
-            
+
+            material_id = self.material_seleccionado_prestamo['id']
+            cantidad_actual = self.material_seleccionado_prestamo['stock']
+
             if cantidad > cantidad_actual:
                 messagebox.showerror("Error", "No hay suficiente stock disponible")
                 return
-            
+
             # Reducir stock
             nueva_cantidad = cantidad_actual - cantidad
             self.cursor.execute("UPDATE materiales SET cantidad_actual = ? WHERE id = ?",
@@ -1605,14 +1949,18 @@ class InventarioPTAR:
             self.conn.commit()
             
             messagebox.showinfo("Éxito", "Préstamo registrado correctamente")
-            
+
             # Limpiar campos
             self.entry_cantidad_prestamo.delete(0, 'end')
             self.entry_prestado_a.delete(0, 'end')
             self.entry_area_prestamo.delete(0, 'end')
             self.text_obs_prestamo.delete("1.0", "end")
-            
+            self.label_material_sel_prestamo.configure(text="Ninguno")
+            self.label_stock_prestamo.configure(text="0")
+            self.material_seleccionado_prestamo = None
+
             self.cargar_datos()
+            self.filtrar_materiales_prestamo()
             self.cargar_prestamos()
             
         except ValueError:
@@ -1621,20 +1969,35 @@ class InventarioPTAR:
             messagebox.showerror("Error", f"Error al registrar préstamo: {str(e)}")
         
     def cargar_prestamos(self):
-        """Carga la lista de préstamos activos"""
-        
+        """Carga la lista de préstamos con filtros"""
+
         for item in self.tree_prestamos.get_children():
             self.tree_prestamos.delete(item)
-        
-        self.cursor.execute('''
-            SELECT p.id, m.nombre, p.cantidad, p.prestado_a, p.area_destino, 
+
+        query = '''
+            SELECT p.id, m.nombre, p.cantidad, p.prestado_a, p.area_destino,
                    p.fecha_prestamo, p.estado
             FROM prestamos p
             JOIN materiales m ON p.material_id = m.id
-            WHERE p.estado = 'ACTIVO'
-            ORDER BY p.fecha_prestamo DESC
-        ''')
-        
+            WHERE 1=1
+        '''
+        params = []
+
+        # Filtro de estado
+        if self.filtro_estado_prestamo.get() == "Activo":
+            query += " AND p.estado = 'ACTIVO'"
+        elif self.filtro_estado_prestamo.get() == "Devuelto":
+            query += " AND p.estado = 'DEVUELTO'"
+
+        # Filtro de búsqueda
+        if self.busqueda_prestamo_var.get():
+            query += " AND (m.nombre LIKE ? OR p.prestado_a LIKE ? OR p.area_destino LIKE ?)"
+            search_term = f"%{self.busqueda_prestamo_var.get()}%"
+            params.extend([search_term, search_term, search_term])
+
+        query += " ORDER BY p.fecha_prestamo DESC"
+
+        self.cursor.execute(query, params)
         for row in self.cursor.fetchall():
             self.tree_prestamos.insert("", "end", values=row)
         
@@ -1693,39 +2056,71 @@ class InventarioPTAR:
             except Exception as e:
                 messagebox.showerror("Error", f"Error al registrar devolución: {str(e)}")
         
+    def filtrar_materiales_uso(self):
+        """Filtra los materiales en el tab de material en uso"""
+        for item in self.tree_mat_uso.get_children():
+            self.tree_mat_uso.delete(item)
+
+        busqueda = self.entry_buscar_mat_uso.get().lower()
+        categoria = self.combo_cat_uso.get()
+
+        query = "SELECT id, codigo, nombre, categoria, cantidad_actual, unidad FROM materiales WHERE 1=1"
+        params = []
+
+        if busqueda:
+            query += " AND (LOWER(nombre) LIKE ? OR LOWER(codigo) LIKE ?)"
+            params.extend([f"%{busqueda}%", f"%{busqueda}%"])
+
+        if categoria != "Todas":
+            query += " AND categoria = ?"
+            params.append(categoria)
+
+        query += " ORDER BY nombre"
+
+        self.cursor.execute(query, params)
+        for row in self.cursor.fetchall():
+            self.tree_mat_uso.insert("", "end", values=row)
+
+    def seleccionar_material_uso(self, event):
+        """Maneja la selección de un material en uso"""
+        seleccion = self.tree_mat_uso.selection()
+        if seleccion:
+            item = self.tree_mat_uso.item(seleccion[0])
+            valores = item['values']
+            self.material_seleccionado_uso = {
+                'id': valores[0],
+                'codigo': valores[1],
+                'nombre': valores[2],
+                'stock': valores[4],
+                'unidad': valores[5]
+            }
+            self.label_material_sel_uso.configure(text=valores[2])
+            self.label_stock_uso.configure(text=f"{valores[4]} {valores[5]}")
+
     def registrar_material_uso(self):
         """Registra material puesto en uso"""
-        
+
         try:
-            material_nombre = self.combo_material_uso.get()
-            if not material_nombre:
-                messagebox.showwarning("Advertencia", "Selecciona un material")
+            if not self.material_seleccionado_uso:
+                messagebox.showwarning("Advertencia", "Selecciona un material de la lista")
                 return
-            
+
             cantidad = float(self.entry_cantidad_uso.get())
             equipo = self.entry_equipo_uso.get()
             responsable = self.entry_responsable_uso.get()
             observaciones = self.text_obs_uso.get("1.0", "end-1c")
-            
+
             if not equipo:
                 messagebox.showwarning("Advertencia", "Indica el equipo o instalación")
                 return
-            
-            # Verificar stock
-            self.cursor.execute("SELECT id, cantidad_actual FROM materiales WHERE nombre = ?", 
-                              (material_nombre,))
-            material = self.cursor.fetchone()
-            
-            if not material:
-                messagebox.showerror("Error", "Material no encontrado")
-                return
-            
-            material_id, cantidad_actual = material
-            
+
+            material_id = self.material_seleccionado_uso['id']
+            cantidad_actual = self.material_seleccionado_uso['stock']
+
             if cantidad > cantidad_actual:
                 messagebox.showerror("Error", "No hay suficiente stock disponible")
                 return
-            
+
             # Reducir stock
             nueva_cantidad = cantidad_actual - cantidad
             self.cursor.execute("UPDATE materiales SET cantidad_actual = ? WHERE id = ?",
@@ -1749,14 +2144,18 @@ class InventarioPTAR:
             self.conn.commit()
             
             messagebox.showinfo("Éxito", "Material en uso registrado correctamente")
-            
+
             # Limpiar campos
             self.entry_cantidad_uso.delete(0, 'end')
             self.entry_equipo_uso.delete(0, 'end')
             self.entry_responsable_uso.delete(0, 'end')
             self.text_obs_uso.delete("1.0", "end")
-            
+            self.label_material_sel_uso.configure(text="Ninguno")
+            self.label_stock_uso.configure(text="0")
+            self.material_seleccionado_uso = None
+
             self.cargar_datos()
+            self.filtrar_materiales_uso()
             self.cargar_material_en_uso()
             
         except ValueError:
@@ -1765,19 +2164,29 @@ class InventarioPTAR:
             messagebox.showerror("Error", f"Error al registrar: {str(e)}")
         
     def cargar_material_en_uso(self):
-        """Carga la lista de material en uso"""
-        
+        """Carga la lista de material en uso con filtros"""
+
         for item in self.tree_en_uso.get_children():
             self.tree_en_uso.delete(item)
-        
-        self.cursor.execute('''
-            SELECT u.id, m.nombre, u.cantidad, u.equipo_instalacion, 
+
+        query = '''
+            SELECT u.id, m.nombre, u.cantidad, u.equipo_instalacion,
                    u.fecha_instalacion, u.responsable
             FROM material_en_uso u
             JOIN materiales m ON u.material_id = m.id
-            ORDER BY u.fecha_instalacion DESC
-        ''')
-        
+            WHERE 1=1
+        '''
+        params = []
+
+        # Filtro de búsqueda
+        if self.busqueda_uso_var.get():
+            query += " AND (m.nombre LIKE ? OR u.equipo_instalacion LIKE ? OR u.responsable LIKE ?)"
+            search_term = f"%{self.busqueda_uso_var.get()}%"
+            params.extend([search_term, search_term, search_term])
+
+        query += " ORDER BY u.fecha_instalacion DESC"
+
+        self.cursor.execute(query, params)
         for row in self.cursor.fetchall():
             self.tree_en_uso.insert("", "end", values=row)
         
@@ -1807,40 +2216,62 @@ class InventarioPTAR:
             except Exception as e:
                 messagebox.showerror("Error", f"Error: {str(e)}")
         
-    def cargar_historial_movimientos(self):
-        """Carga el historial de movimientos recientes"""
-        
-        # Entradas
+    def cargar_historial_entradas(self):
+        """Carga el historial de entradas con filtros"""
+
         for item in self.tree_entradas.get_children():
             self.tree_entradas.delete(item)
-        
-        self.cursor.execute('''
+
+        query = '''
             SELECT m.fecha, mat.nombre, m.cantidad, m.destino_origen, m.responsable
             FROM movimientos m
             JOIN materiales mat ON m.material_id = mat.id
             WHERE m.tipo_movimiento = 'ENTRADA'
-            ORDER BY m.fecha DESC
-            LIMIT 50
-        ''')
-        
+        '''
+        params = []
+
+        # Filtro de búsqueda
+        if self.busqueda_entrada_var.get():
+            query += " AND (mat.nombre LIKE ? OR m.destino_origen LIKE ? OR m.responsable LIKE ?)"
+            search_term = f"%{self.busqueda_entrada_var.get()}%"
+            params.extend([search_term, search_term, search_term])
+
+        query += " ORDER BY m.fecha DESC LIMIT 50"
+
+        self.cursor.execute(query, params)
         for row in self.cursor.fetchall():
             self.tree_entradas.insert("", "end", values=row)
-        
-        # Salidas
+
+    def cargar_historial_salidas(self):
+        """Carga el historial de salidas con filtros"""
+
         for item in self.tree_salidas.get_children():
             self.tree_salidas.delete(item)
-        
-        self.cursor.execute('''
+
+        query = '''
             SELECT m.fecha, mat.nombre, m.cantidad, m.destino_origen, m.responsable
             FROM movimientos m
             JOIN materiales mat ON m.material_id = mat.id
             WHERE m.tipo_movimiento = 'SALIDA'
-            ORDER BY m.fecha DESC
-            LIMIT 50
-        ''')
-        
+        '''
+        params = []
+
+        # Filtro de búsqueda
+        if self.busqueda_salida_var.get():
+            query += " AND (mat.nombre LIKE ? OR m.destino_origen LIKE ? OR m.responsable LIKE ?)"
+            search_term = f"%{self.busqueda_salida_var.get()}%"
+            params.extend([search_term, search_term, search_term])
+
+        query += " ORDER BY m.fecha DESC LIMIT 50"
+
+        self.cursor.execute(query, params)
         for row in self.cursor.fetchall():
             self.tree_salidas.insert("", "end", values=row)
+
+    def cargar_historial_movimientos(self):
+        """Carga el historial de movimientos recientes"""
+        self.cargar_historial_entradas()
+        self.cargar_historial_salidas()
         
     def exportar_reporte(self, tipo):
         """Exporta reportes a Excel"""

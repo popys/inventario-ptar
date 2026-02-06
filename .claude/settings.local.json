@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(python fix_database.py:*)"
+      "Bash(python fix_database.py:*)",
+      "Bash(python -m py_compile:*)"
     ]
   }
 }

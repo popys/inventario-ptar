@@ -142,16 +142,57 @@
                 <h2><i class="fas fa-arrow-circle-down"></i> Registro de Entrada de Material</h2>
             </div>
 
+            <!-- Filtros de Búsqueda de Material -->
+            <div class="filters-panel">
+                <div class="filter-group">
+                    <label><i class="fas fa-search"></i> Buscar Material:</label>
+                    <input type="text" id="searchEntradaMaterial" placeholder="Buscar por nombre o código..." class="input-search">
+                </div>
+                <div class="filter-group">
+                    <label><i class="fas fa-tag"></i> Categoría:</label>
+                    <select id="filterEntradaCategoria" class="input-select">
+                        <option value="">Todas</option>
+                        <option value="Papeleria">Papeleria</option>
+                        <option value="Limpieza">Limpieza</option>
+                        <option value="Seguridad">Seguridad</option>
+                        <option value="Herramientas">Herramientas</option>
+                        <option value="Ferreteria">Ferreteria</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Tabla de Materiales -->
+            <div class="table-container" style="max-height: 300px; margin-bottom: 20px;">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Código</th>
+                            <th>Nombre</th>
+                            <th>Categoría</th>
+                            <th>Stock Actual</th>
+                            <th>Unidad</th>
+                        </tr>
+                    </thead>
+                    <tbody id="entradaMaterialesTableBody">
+                        <tr><td colspan="5" class="loading"><i class="fas fa-spinner fa-spin"></i> Cargando...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Material Seleccionado -->
+            <div class="selected-material-info" id="entradaMaterialSeleccionado" style="display:none; padding: 15px; background: #f0f8ff; border-left: 4px solid #2196F3; margin-bottom: 20px; border-radius: 4px;">
+                <strong><i class="fas fa-check-circle"></i> Material Seleccionado:</strong>
+                <span id="entradaMaterialNombre">-</span>
+                <span style="margin-left: 20px; color: #666;">
+                    <strong>Stock Disponible:</strong> <span id="entradaMaterialStock">0</span>
+                </span>
+            </div>
+
             <div class="form-container">
                 <form id="formEntrada" class="material-form">
-                    <div class="form-grid">
-                        <div class="form-group full-width">
-                            <label><i class="fas fa-box"></i> Material *</label>
-                            <select id="entradaMaterialId" class="input-select" required>
-                                <option value="">Seleccione un material...</option>
-                            </select>
-                        </div>
+                    <input type="hidden" id="entradaMaterialId">
 
+                    <div class="form-grid">
                         <div class="form-group">
                             <label><i class="fas fa-hashtag"></i> Cantidad *</label>
                             <input type="number" id="entradaCantidad" class="input-field" step="0.01" min="0.01" required>
@@ -212,17 +253,57 @@
                 <h2><i class="fas fa-arrow-circle-up"></i> Registro de Salida de Material</h2>
             </div>
 
+            <!-- Filtros de Búsqueda de Material -->
+            <div class="filters-panel">
+                <div class="filter-group">
+                    <label><i class="fas fa-search"></i> Buscar Material:</label>
+                    <input type="text" id="searchSalidaMaterial" placeholder="Buscar por nombre o código..." class="input-search">
+                </div>
+                <div class="filter-group">
+                    <label><i class="fas fa-tag"></i> Categoría:</label>
+                    <select id="filterSalidaCategoria" class="input-select">
+                        <option value="">Todas</option>
+                        <option value="Papeleria">Papeleria</option>
+                        <option value="Limpieza">Limpieza</option>
+                        <option value="Seguridad">Seguridad</option>
+                        <option value="Herramientas">Herramientas</option>
+                        <option value="Ferreteria">Ferreteria</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Tabla de Materiales -->
+            <div class="table-container" style="max-height: 300px; margin-bottom: 20px;">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Código</th>
+                            <th>Nombre</th>
+                            <th>Categoría</th>
+                            <th>Stock Actual</th>
+                            <th>Unidad</th>
+                        </tr>
+                    </thead>
+                    <tbody id="salidaMaterialesTableBody">
+                        <tr><td colspan="5" class="loading"><i class="fas fa-spinner fa-spin"></i> Cargando...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Material Seleccionado -->
+            <div class="selected-material-info" id="salidaMaterialSeleccionado" style="display:none; padding: 15px; background: #fff3cd; border-left: 4px solid #ff9800; margin-bottom: 20px; border-radius: 4px;">
+                <strong><i class="fas fa-check-circle"></i> Material Seleccionado:</strong>
+                <span id="salidaMaterialNombre">-</span>
+                <span style="margin-left: 20px; color: #666;">
+                    <strong>Stock Disponible:</strong> <span id="salidaMaterialStock">0</span>
+                </span>
+            </div>
+
             <div class="form-container">
                 <form id="formSalida" class="material-form">
-                    <div class="form-grid">
-                        <div class="form-group full-width">
-                            <label><i class="fas fa-box"></i> Material *</label>
-                            <select id="salidaMaterialId" class="input-select" required>
-                                <option value="">Seleccione un material...</option>
-                            </select>
-                            <small class="disponible-info" id="salidaDisponible"></small>
-                        </div>
+                    <input type="hidden" id="salidaMaterialId">
 
+                    <div class="form-grid">
                         <div class="form-group">
                             <label><i class="fas fa-hashtag"></i> Cantidad *</label>
                             <input type="number" id="salidaCantidad" class="input-field" step="0.01" min="0.01" required>
@@ -291,17 +372,57 @@
                 <h2><i class="fas fa-handshake"></i> Control de Préstamos</h2>
             </div>
 
+            <!-- Filtros de Búsqueda de Material -->
+            <div class="filters-panel">
+                <div class="filter-group">
+                    <label><i class="fas fa-search"></i> Buscar Material:</label>
+                    <input type="text" id="searchPrestamoMaterial" placeholder="Buscar por nombre o código..." class="input-search">
+                </div>
+                <div class="filter-group">
+                    <label><i class="fas fa-tag"></i> Categoría:</label>
+                    <select id="filterPrestamoCategoria" class="input-select">
+                        <option value="">Todas</option>
+                        <option value="Papeleria">Papeleria</option>
+                        <option value="Limpieza">Limpieza</option>
+                        <option value="Seguridad">Seguridad</option>
+                        <option value="Herramientas">Herramientas</option>
+                        <option value="Ferreteria">Ferreteria</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Tabla de Materiales -->
+            <div class="table-container" style="max-height: 300px; margin-bottom: 20px;">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Código</th>
+                            <th>Nombre</th>
+                            <th>Categoría</th>
+                            <th>Stock Actual</th>
+                            <th>Unidad</th>
+                        </tr>
+                    </thead>
+                    <tbody id="prestamoMaterialesTableBody">
+                        <tr><td colspan="5" class="loading"><i class="fas fa-spinner fa-spin"></i> Cargando...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Material Seleccionado -->
+            <div class="selected-material-info" id="prestamoMaterialSeleccionado" style="display:none; padding: 15px; background: #e1f5fe; border-left: 4px solid #00bcd4; margin-bottom: 20px; border-radius: 4px;">
+                <strong><i class="fas fa-check-circle"></i> Material Seleccionado:</strong>
+                <span id="prestamoMaterialNombre">-</span>
+                <span style="margin-left: 20px; color: #666;">
+                    <strong>Stock Disponible:</strong> <span id="prestamoMaterialStock">0</span>
+                </span>
+            </div>
+
             <div class="form-container">
                 <form id="formPrestamo" class="material-form">
-                    <div class="form-grid">
-                        <div class="form-group full-width">
-                            <label><i class="fas fa-box"></i> Material *</label>
-                            <select id="prestamoMaterialId" class="input-select" required>
-                                <option value="">Seleccione un material...</option>
-                            </select>
-                            <small class="disponible-info" id="prestamoDisponible"></small>
-                        </div>
+                    <input type="hidden" id="prestamoMaterialId">
 
+                    <div class="form-grid">
                         <div class="form-group">
                             <label><i class="fas fa-hashtag"></i> Cantidad *</label>
                             <input type="number" id="prestamoCantidad" class="input-field" step="0.01" min="0.01" required>
@@ -363,17 +484,57 @@
                 <h2><i class="fas fa-tools"></i> Material en Uso</h2>
             </div>
 
+            <!-- Filtros de Búsqueda de Material -->
+            <div class="filters-panel">
+                <div class="filter-group">
+                    <label><i class="fas fa-search"></i> Buscar Material:</label>
+                    <input type="text" id="searchEnUsoMaterial" placeholder="Buscar por nombre o código..." class="input-search">
+                </div>
+                <div class="filter-group">
+                    <label><i class="fas fa-tag"></i> Categoría:</label>
+                    <select id="filterEnUsoCategoria" class="input-select">
+                        <option value="">Todas</option>
+                        <option value="Papeleria">Papeleria</option>
+                        <option value="Limpieza">Limpieza</option>
+                        <option value="Seguridad">Seguridad</option>
+                        <option value="Herramientas">Herramientas</option>
+                        <option value="Ferreteria">Ferreteria</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Tabla de Materiales -->
+            <div class="table-container" style="max-height: 300px; margin-bottom: 20px;">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Código</th>
+                            <th>Nombre</th>
+                            <th>Categoría</th>
+                            <th>Stock Actual</th>
+                            <th>Unidad</th>
+                        </tr>
+                    </thead>
+                    <tbody id="enUsoMaterialesTableBody">
+                        <tr><td colspan="5" class="loading"><i class="fas fa-spinner fa-spin"></i> Cargando...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Material Seleccionado -->
+            <div class="selected-material-info" id="enUsoMaterialSeleccionado" style="display:none; padding: 15px; background: #e8f5e9; border-left: 4px solid #4caf50; margin-bottom: 20px; border-radius: 4px;">
+                <strong><i class="fas fa-check-circle"></i> Material Seleccionado:</strong>
+                <span id="enUsoMaterialNombre">-</span>
+                <span style="margin-left: 20px; color: #666;">
+                    <strong>Stock Disponible:</strong> <span id="enUsoMaterialStock">0</span>
+                </span>
+            </div>
+
             <div class="form-container">
                 <form id="formEnUso" class="material-form">
-                    <div class="form-grid">
-                        <div class="form-group full-width">
-                            <label><i class="fas fa-box"></i> Material *</label>
-                            <select id="enUsoMaterialId" class="input-select" required>
-                                <option value="">Seleccione un material...</option>
-                            </select>
-                            <small class="disponible-info" id="enUsoDisponible"></small>
-                        </div>
+                    <input type="hidden" id="enUsoMaterialId">
 
+                    <div class="form-grid">
                         <div class="form-group">
                             <label><i class="fas fa-hashtag"></i> Cantidad *</label>
                             <input type="number" id="enUsoCantidad" class="input-field" step="0.01" min="0.01" required>
